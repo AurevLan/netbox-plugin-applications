@@ -3,6 +3,15 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.4.4] — 2026-09-14
+
+### Ajouté
+
+- **Les listes portent la couleur des référentiels.** Les colonnes de statut, criticité, RTO,
+  RPO, horaires, classification et authentification — ainsi qu'environnement, statut et
+  maintenance sur les déploiements — s'affichent en badges colorés et cliquables. C'est dans une
+  liste de plusieurs dizaines de lignes que la palette paie : le regard trie sans lire.
+
 ## [0.4.3] — 2026-09-14
 
 ### Corrigé

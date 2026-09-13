@@ -149,15 +149,17 @@ class ApplicationTable(NetBoxTable):
     application_id = tables.Column(linkify=True, verbose_name="Identifiant")
     name = tables.Column(linkify=True, verbose_name="Application")
     client = tables.Column(linkify=True, verbose_name="Client")
-    # Les référentiels sont désormais des objets : leur colonne est cliquable
-    # et mène à leur fiche, ce qu'une valeur de liste ne permettait pas.
-    lifecycle_status = tables.Column(linkify=True, verbose_name="Statut")
-    criticality = tables.Column(linkify=True, verbose_name="Criticité")
-    data_classification = tables.Column(linkify=True, verbose_name="Classification")
-    authentication = tables.Column(linkify=True, verbose_name="Authentification")
-    rto = tables.Column(linkify=True, verbose_name="RTO")
-    rpo = tables.Column(linkify=True, verbose_name="RPO")
-    service_hours = tables.Column(linkify=True, verbose_name="Horaires")
+    # Les référentiels sont des objets : leur colonne est cliquable et mène à
+    # leur fiche, ce qu'une valeur de liste ne permettait pas. Elle porte en
+    # outre la COULEUR de la valeur — c'est dans une liste de plusieurs
+    # dizaines de lignes que la palette paie : le regard trie sans lire.
+    lifecycle_status = columns.ColoredLabelColumn(verbose_name="Statut")
+    criticality = columns.ColoredLabelColumn(verbose_name="Criticité")
+    data_classification = columns.ColoredLabelColumn(verbose_name="Classification")
+    authentication = columns.ColoredLabelColumn(verbose_name="Authentification")
+    rto = columns.ColoredLabelColumn(verbose_name="RTO")
+    rpo = columns.ColoredLabelColumn(verbose_name="RPO")
+    service_hours = columns.ColoredLabelColumn(verbose_name="Horaires")
     personal_data = columns.BooleanColumn(verbose_name="RGPD")
     technical_contact = tables.Column(linkify=True, verbose_name="Réf. technique")
     project_manager = tables.Column(linkify=True, verbose_name="Réf. projet")
@@ -206,9 +208,9 @@ class ApplicationTable(NetBoxTable):
 
 class DeploymentTable(NetBoxTable):
     application = tables.Column(linkify=True, verbose_name="Application")
-    environment = tables.Column(linkify=True, verbose_name="Environnement")
-    status = tables.Column(linkify=True, verbose_name="Statut")
-    maintenance_window = tables.Column(linkify=True, verbose_name="Maintenance")
+    environment = columns.ColoredLabelColumn(verbose_name="Environnement")
+    status = columns.ColoredLabelColumn(verbose_name="Statut")
+    maintenance_window = columns.ColoredLabelColumn(verbose_name="Maintenance")
     external_facing = columns.BooleanColumn(verbose_name="Externe")
     access_url = tables.URLColumn(verbose_name="URL d'accès")
     vm_count = columns.LinkedCountColumn(
