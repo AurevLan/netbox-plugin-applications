@@ -94,37 +94,143 @@ démarrage explicitement**, plutôt que de produire un comportement imprévisibl
 
 ### Avec netbox-docker
 
-Étendre l'image publiée, sans la reconstruire :
+L'image officielle de NetBox ne contient pas les plugins : il faut en **dériver une** qui les
+installe. C'est la façon prévue par `netbox-docker`, pas un contournement.
+
+Trois fichiers à créer dans votre copie de `netbox-docker`, puis une commande.
+
+#### 1. `Dockerfile-plugins`
 
 ```dockerfile
-ARG NETBOX_IMAGE_TAG
+# Dérive l'image officielle en y ajoutant le plugin.
+# L'image amont n'est pas reconstruite : ses correctifs restent acquis.
+ARG NETBOX_IMAGE_TAG=v4.7-5.1.1
 FROM netboxcommunity/netbox:${NETBOX_IMAGE_TAG}
 
+ARG PLUGIN_VERSION=v0.1.0
+
 USER root
-COPY netbox-plugin-applications/ /opt/netbox-plugins/applications/
-# L'image amont installe ses dépendances avec « uv », et un venv créé par uv
-# n'embarque PAS pip : « venv/bin/pip » échouerait en 127.
-RUN uv pip install --no-cache /opt/netbox-plugins/applications/
+
+# git n'est nécessaire QUE pour l'installation depuis un dépôt, et il est
+# retiré aussitôt : le laisser agrandirait l'image et sa surface d'attaque.
+#
+# « uv pip » et non « pip » : l'image officielle installe ses dépendances avec
+# uv, et un environnement virtuel créé par uv n'embarque PAS pip.
+# « /opt/netbox/venv/bin/pip » échouerait avec un code 127.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git \
+ && uv pip install --no-cache \
+      "netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@${PLUGIN_VERSION}" \
+ && apt-get purge -y --auto-remove git \
+ && rm -rf /var/lib/apt/lists/*
+
 USER 999
 ```
 
-Puis déclarer le plugin dans `/etc/netbox/config/extra.py` :
+#### 2. `configuration/extra.py`
 
 ```python
 PLUGINS = ["netbox_applications"]
 ```
 
-> **Le service `netbox-worker` doit utiliser la même image.** Un worker sans le plugin ne saurait
-> pas traiter les objets qu'il définit.
+> Ce fichier existe déjà dans `netbox-docker` — ajoutez-y la ligne plutôt que de l'écraser.
 
-### Installation classique
+#### 3. `docker-compose.override.yml`
+
+```yaml
+# L'ancre est partagée entre netbox et netbox-worker : les deux DOIVENT
+# utiliser la même image. Un worker sans le plugin ne saurait pas traiter les
+# objets qu'il définit, et l'erreur ne se voit qu'à l'exécution d'une tâche.
+x-netbox-plugins: &netbox-plugins
+  build:
+    context: .
+    dockerfile: Dockerfile-plugins
+    args:
+      NETBOX_IMAGE_TAG: "v4.7-5.1.1"
+      PLUGIN_VERSION: "v0.1.0"
+  image: netbox-with-plugins:latest
+
+services:
+  netbox:
+    <<: *netbox-plugins
+    ports:
+      - "8000:8080"
+    healthcheck:
+      # Le premier démarrage après ajout d'un plugin est plus long : migrations
+      # et collecte des fichiers statiques. Sur une machine modeste, la valeur
+      # amont (90 s) ne suffit pas.
+      start_period: 300s
+
+  netbox-worker:
+    <<: *netbox-plugins
+```
+
+#### 4. Construire et démarrer
 
 ```bash
+docker compose build netbox
+docker compose up -d
+```
+
+**Les migrations sont appliquées automatiquement** au démarrage par le point d'entrée de
+`netbox-docker` : aucune commande à lancer.
+
+#### 5. Vérifier
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/api/plugins/installed-plugins/
+```
+
+Doit retourner `Applications` et sa version. Le menu **Applications** apparaît alors dans
+l'interface.
+
+#### Si quelque chose ne va pas
+
+| Symptôme | Cause |
+|---|---|
+| `exit code: 127` à la construction | `pip` utilisé au lieu de `uv pip` — l'image officielle n'a pas pip dans son venv |
+| Le menu n'apparaît pas | `PLUGINS` absent de `configuration/extra.py`, ou fichier non monté |
+| `relation "netbox_applications_..." does not exist` | l'image a été construite sans le plugin, ou le conteneur tourne sur une image antérieure — reconstruire puis `up -d` |
+| Les tâches en arrière-plan échouent | `netbox-worker` n'utilise pas la même image que `netbox` |
+| Démarrage déclaré `unhealthy` | `start_period` trop court sur une machine lente |
+
+### Installation classique (NetBox installé directement sur un serveur)
+
+> **Le paquet n'est pas encore publié sur PyPI.** L'installation se fait depuis ce dépôt.
+
+```bash
+# 1. Installer dans l'environnement virtuel de NetBox — pas celui du système
 source /opt/netbox/venv/bin/activate
-pip install netbox-plugin-applications
+pip install "netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.1.0"
+```
+
+```python
+# 2. Déclarer le plugin dans /opt/netbox/netbox/netbox/configuration.py
+PLUGINS = ["netbox_applications"]
+```
+
+```bash
+# 3. Appliquer les migrations et collecter les fichiers statiques
 python /opt/netbox/netbox/manage.py migrate
 python /opt/netbox/netbox/manage.py collectstatic --no-input
+
+# 4. Redémarrer NetBox ET son worker
+sudo systemctl restart netbox netbox-rq
 ```
+
+```bash
+# 5. Survivre aux mises à jour de NetBox
+#    upgrade.sh recrée l'environnement virtuel : sans cette ligne, le plugin
+#    disparaîtrait silencieusement à la prochaine montée de version.
+echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.1.0' \
+  >> /opt/netbox/local_requirements.txt
+```
+
+> **L'étape 5 est celle qu'on oublie.** Le script `upgrade.sh` de NetBox reconstruit
+> l'environnement virtuel à partir de `requirements.txt` et `local_requirements.txt`. Un plugin
+> absent de ce second fichier est perdu à la mise à jour — et l'interface se met simplement à
+> ne plus afficher le menu, sans erreur.
 
 ---
 
