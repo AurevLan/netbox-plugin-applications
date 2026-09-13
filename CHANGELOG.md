@@ -3,6 +3,27 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.4.2] — 2026-09-14
+
+### Corrigé — les référentiels étaient inutilisables
+
+- **Les dix listes de référentiels répondaient HTTP 500** :
+  `'NoneType' object has no attribute '_meta'`. Le formulaire de filtres était une classe unique
+  partagée par les dix vues, sans attribut `model` — dont NetBox a besoin pour les filtres
+  enregistrés. Chaque vue reçoit désormais son propre formulaire.
+- **Les dix fiches de référentiel répondaient HTTP 500** : `TemplateDoesNotExist`. Aucune
+  disposition ni gabarit n'était déclaré. Elles utilisent maintenant les panneaux déclaratifs de
+  NetBox 4.7, et leurs attributs sont **déduits du modèle** — un champ ajouté s'affiche sans
+  retoucher l'affichage.
+- La fiche montre désormais **combien de fiches emploient la valeur**, ce qui explique le refus
+  de suppression au lieu de le subir.
+
+### Ajouté
+
+- **La CI parcourt les 48 pages du plugin** comme le ferait un navigateur, vues et routage
+  compris. Elle ne rendait jusqu'ici que deux gabarits isolément, ce qui n'aurait jamais révélé
+  ces erreurs. Elle échoue aussi sur tout texte parasite dans le HTML produit.
+
 ## [0.4.1] — 2026-09-14
 
 ### Corrigé

@@ -101,11 +101,11 @@ jobs:
             netbox-plugin-test \
             /opt/netbox/netbox/manage.py migrate
 
-      # Un gabarit peut être syntaxiquement accepté par Django et produire du
-      # texte parasite : un commentaire {# … #} sur plusieurs lignes n'est PAS
-      # un commentaire, et un filtre appliqué à une méthode affiche l'objet
-      # méthode. Aucun lint ne le voit — seul le rendu le révèle.
-      - name: Rendre réellement les gabarits
+      # C'EST LE CONTRÔLE QUI COMPTE. Rendre un gabarit isolément ne prouve
+      # rien : la version 0.4.0 avait dix pages en erreur 500 alors que ses
+      # gabarits se rendaient. On parcourt donc TOUTES les pages du plugin
+      # comme le ferait un navigateur, vues et routage compris.
+      - name: Parcourir toutes les pages du plugin
         run: |
           docker run --rm --network host \
             -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
@@ -113,28 +113,48 @@ jobs:
             -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
             netbox-plugin-test \
             /opt/netbox/netbox/manage.py shell -c "
-          from django.template.loader import render_to_string
-          from django.test import RequestFactory
+          from django.test import Client
+          from django.urls import reverse
           from django.contrib.auth import get_user_model
-          from netbox_applications.models import Application, Deployment
+          from netbox_applications.models import (
+              Application, Deployment, REFERENCES, Environment,
+          )
 
           U = get_user_model()
           user = U.objects.create_superuser('ci', 'ci@example.invalid', 'x')
-          app = Application.objects.create(name='ci-app')
-          dep = Deployment.objects.create(application=app, environment='production')
-          req = RequestFactory().get('/'); req.user = user
 
+          # Une valeur dans chaque référentiel : une page de fiche ne se teste
+          # pas sans objet à afficher.
+          for modele in REFERENCES:
+              modele.objects.create(name='ci', slug='ci')
+          app = Application.objects.create(name='ci-app')
+          Deployment.objects.create(application=app, environment=Environment.objects.first())
+
+          c = Client(raise_request_exception=False)
+          c.force_login(user)
+
+          pages = []
+          for modele in (*REFERENCES, Application, Deployment):
+              nom = modele._meta.model_name
+              pages.append(reverse(f'plugins:netbox_applications:{nom}_list'))
+              pages.append(reverse(f'plugins:netbox_applications:{nom}_add'))
+              objet = modele.objects.first()
+              pages.append(objet.get_absolute_url())
+              pages.append(objet.get_absolute_url() + 'edit/')
+
+          PARASITES = ('functools.partial', '{#', '#}', '{{', '{%')
           echecs = []
-          for gabarit, ctx in (
-              ('netbox_applications/application.html', {'object': app}),
-              ('netbox_applications/deployment.html', {'object': dep}),
-          ):
-              html = render_to_string(gabarit, ctx, request=req)
-              # Texte qui ne devrait JAMAIS apparaître dans une page rendue.
-              for motif in ('functools.partial', '{#', '#}', '{{', '{%'):
-                  if motif in html:
-                      echecs.append(f'{gabarit} : « {motif} » présent dans le rendu')
+          for url in pages:
+              r = c.get(url)
+              if r.status_code not in (200, 302):
+                  echecs.append(f'{url} -> HTTP {r.status_code}')
+                  continue
+              if r.status_code == 200:
+                  html = r.content.decode()
+                  for motif in PARASITES:
+                      if motif in html:
+                          echecs.append(f'{url} : « {motif} » présent dans le rendu')
           if echecs:
               raise SystemExit('ECHEC\n' + '\n'.join(echecs))
-          print('Gabarits rendus sans texte parasite.')
+          print(f'{len(pages)} pages parcourues, toutes rendues sans texte parasite.')
           "

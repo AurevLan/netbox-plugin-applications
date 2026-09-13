@@ -1,9 +1,12 @@
 from django.db.models import Count
 
+from extras.ui.panels import CustomFieldsPanel, TagsPanel
+from netbox.ui import layout
+from netbox.ui.panels import RelatedObjectsPanel
 from netbox.views import generic
-from utilities.views import ViewTab, register_model_view
+from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view
 
-from . import filtersets, forms, models, tables
+from . import filtersets, forms, models, panels, tables
 
 # --- Référentiels --------------------------------------------------------------
 #
@@ -56,8 +59,35 @@ def _build_reference_views(modele, table, filtre, formulaire):
     """Produit les cinq vues d'un référentiel et les expose dans ce module."""
     nom = modele.__name__
     qs = modele.objects.all()
+
+    # La fiche se décrit par une DISPOSITION (NetBox 4.7) : sans elle, la vue
+    # cherche un gabarit « netbox_applications/<modele>.html » qui n'existe pas
+    # et répond 500. Le panneau « Objets liés » montre au passage combien de
+    # fiches emploient la valeur — donc pourquoi sa suppression est refusée.
+    disposition = layout.SimpleLayout(
+        left_panels=[panels.panneau_pour(modele)(), TagsPanel()],
+        right_panels=[RelatedObjectsPanel(), CustomFieldsPanel()],
+    )
+
+    def _contexte(self, request, instance):
+        return {"related_models": self.get_related_models(request, instance)}
+
     classes = {
-        f"{nom}View": type(f"{nom}View", (generic.ObjectView,), {"queryset": qs}),
+        f"{nom}View": type(
+            f"{nom}View",
+            (GetRelatedModelsMixin, generic.ObjectView),
+            {
+                "queryset": qs,
+                "layout": disposition,
+                # La disposition NE SUFFIT PAS : ObjectView résout toujours un
+                # gabarit « <app>/<modele>.html ». Les modèles de l'amont en
+                # embarquent un, réduit à « {% extends 'generic/object.html' %} ».
+                # On pointe directement le gabarit générique plutôt que d'écrire
+                # dix fichiers d'une ligne.
+                "template_name": "generic/object.html",
+                "get_extra_context": _contexte,
+            },
+        ),
         f"{nom}ListView": type(
             f"{nom}ListView",
             (generic.ObjectListView,),
@@ -65,7 +95,10 @@ def _build_reference_views(modele, table, filtre, formulaire):
                 "queryset": qs,
                 "table": table,
                 "filterset": filtre,
-                "filterset_form": forms.ReferenceFilterForm,
+                # Le formulaire de filtres doit connaître SON modèle : NetBox
+                # s'en sert pour les filtres enregistrés. Une classe partagée
+                # laisse « model » à None et fait échouer toute la liste.
+                "filterset_form": type(f"{nom}FilterForm", (forms.ReferenceFilterForm,), {"model": modele}),
             },
         ),
         f"{nom}EditView": type(
