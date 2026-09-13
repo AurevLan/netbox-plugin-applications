@@ -54,7 +54,8 @@ interrompt la production en croyant toucher la recette.
 | Environnement, statut | unicité garantie : **une seule fiche par environnement** |
 | Plage de maintenance | quand une interruption est admise **ici** |
 | Diffusé à l'externe | propre à cet environnement |
-| URL d'accès, VM | |
+| **URL d'accès** | **propre à cet environnement** — la recette n'a pas l'URL de la production |
+| VM | les machines qui portent cette instance |
 
 ### Deux règles impossibles à enfreindre
 
@@ -269,8 +270,9 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
   "$NETBOX_URL/api/plugins/applications/deployments/"
 ```
 
-> **`access_url` et non `url`.** Le modèle a un champ `url` (l'adresse d'accès) et NetBox attend
-> un champ `url` hypermedia. L'adresse d'accès est donc exposée sous `access_url`.
+> **`access_url` et non `url`.** Chaque objet NetBox expose déjà un champ `url` hypermedia,
+> qui pointe vers l'objet lui-même. L'adresse d'accès de l'application porte donc un nom
+> distinct.
 
 ### Filtres utiles
 

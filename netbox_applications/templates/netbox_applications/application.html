@@ -70,15 +70,32 @@
       <h2 class="card-header">Déploiements
         <span class="badge text-bg-secondary">{{ object.deployments.count }}</span></h2>
       {% if object.deployments.exists %}
-        <table class="table table-hover attr-table">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Environnement</th><th>Statut</th><th>URL d'accès</th>
+              <th>Maintenance</th><th>Externe</th><th>VM</th>
+            </tr>
+          </thead>
+          <tbody>
           {% for d in object.deployments.all %}
             <tr>
-              <td>{% badge d.get_environment_display bg_color=d.get_environment_color %}</td>
               <td>{{ d|linkify:"get_environment_display" }}</td>
               <td>{% badge d.get_status_display bg_color=d.get_status_color %}</td>
-              <td>{{ d.virtual_machines.count }} VM</td>
+              {# L'URL figure ICI : c'est sur la fiche de l'application qu'on
+                 cherche « où est la recette ? ». Obliger à ouvrir chaque
+                 déploiement donnait l'impression qu'il n'y avait qu'une URL. #}
+              <td>
+                {% if d.access_url %}
+                  <a href="{{ d.access_url }}" target="_blank" rel="noopener">{{ d.access_url }}</a>
+                {% else %}{{ ''|placeholder }}{% endif %}
+              </td>
+              <td>{% badge d.get_maintenance_window_display bg_color=d.get_maintenance_window_color %}</td>
+              <td>{% checkmark d.external_facing %}</td>
+              <td>{{ d.virtual_machines.count }}</td>
             </tr>
           {% endfor %}
+          </tbody>
         </table>
       {% else %}
         <div class="card-body text-muted">Aucun déploiement. Une application sans déploiement n'existe que sur le papier.</div>

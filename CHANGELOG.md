@@ -3,7 +3,26 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.2.0] — 2026-09-13
+
+### Corrigé
+
+- **L'URL d'accès d'un déploiement n'était visible nulle part.** Elle existait bien par
+  environnement, mais n'apparaissait ni dans le panneau « Déploiements » de la fiche
+  application, ni dans les colonnes par défaut de la liste. Il fallait ouvrir chaque
+  déploiement pour la voir — ce qui donnait l'impression qu'il n'y avait **qu'une seule URL**,
+  celle de la production.
+  Elle figure désormais aux deux endroits.
+
+### Modifié
+
+- **`Deployment.url` renommé en `Deployment.access_url`.** L'ancien nom entrait en collision
+  avec le champ `url` hypermedia que NetBox expose sur chaque objet, ce qui imposait un
+  contournement dans le sérialiseur. Le renommage supprime la cause plutôt que de la contourner.
+  Migration `RenameField` : **les données existantes sont préservées**.
+- Le panneau « Déploiements » de la fiche application affiche désormais environnement, statut,
+  URL, plage de maintenance, exposition externe et nombre de VM — au lieu de quatre colonnes
+  sans en-têtes.
 
 ### Documentation
 

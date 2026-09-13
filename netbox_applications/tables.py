@@ -70,7 +70,7 @@ class DeploymentTable(NetBoxTable):
     status = columns.ChoiceFieldColumn(verbose_name="Statut")
     maintenance_window = columns.ChoiceFieldColumn(verbose_name="Maintenance")
     external_facing = columns.BooleanColumn(verbose_name="Externe")
-    url = tables.URLColumn(verbose_name="URL")
+    access_url = tables.URLColumn(verbose_name="URL d'accès")
     vm_count = columns.LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
         url_params={"deployment_id": "pk"},
@@ -88,7 +88,7 @@ class DeploymentTable(NetBoxTable):
             "status",
             "maintenance_window",
             "external_facing",
-            "url",
+            "access_url",
             "vm_count",
             "description",
             "tags",

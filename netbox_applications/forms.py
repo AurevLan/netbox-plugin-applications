@@ -96,7 +96,7 @@ class DeploymentForm(NetBoxModelForm):
 
     fieldsets = (
         FieldSet("application", "environment", "status", "description", name="Identité"),
-        FieldSet("maintenance_window", "external_facing", "url", name="Exploitation"),
+        FieldSet("maintenance_window", "external_facing", "access_url", name="Exploitation"),
         FieldSet("virtual_machines", name="Ressources"),
         FieldSet("tags", name="Divers"),
     )
@@ -110,7 +110,7 @@ class DeploymentForm(NetBoxModelForm):
             "description",
             "maintenance_window",
             "external_facing",
-            "url",
+            "access_url",
             "virtual_machines",
             "comments",
             "tags",

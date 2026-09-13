@@ -69,13 +69,9 @@ class ApplicationSerializer(NetBoxModelSerializer):
 
 
 class DeploymentSerializer(NetBoxModelSerializer):
-    # ATTENTION : le modèle Deployment a un champ « url » (l'adresse d'accès),
-    # et NetBox attend un champ « url » hypermedia. On expose donc l'adresse
-    # d'accès sous « access_url » pour lever l'ambiguïté.
     url = serializers.HyperlinkedIdentityField(
         view_name="plugins-api:netbox_applications-api:deployment-detail"
     )
-    access_url = serializers.URLField(source="url", required=False, allow_blank=True)
     application = ApplicationSerializer(nested=True)
     environment = ChoiceField(choices=EnvironmentChoices)
     status = ChoiceField(choices=DeploymentStatusChoices, required=False)

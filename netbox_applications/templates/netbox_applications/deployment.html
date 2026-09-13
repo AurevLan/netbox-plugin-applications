@@ -14,7 +14,7 @@
         <tr><th scope="row">Statut</th>
             <td>{% badge object.get_status_display bg_color=object.get_status_color %}</td></tr>
         <tr><th scope="row">URL d'accès</th>
-            <td>{% if object.url %}<a href="{{ object.url }}" target="_blank" rel="noopener">{{ object.url }}</a>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+            <td>{% if object.access_url %}<a href="{{ object.access_url }}" target="_blank" rel="noopener">{{ object.access_url }}</a>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
         <tr><th scope="row">Description</th><td>{{ object.description|placeholder }}</td></tr>
       </table>
     </div>

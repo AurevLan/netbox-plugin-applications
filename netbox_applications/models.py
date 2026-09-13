@@ -216,7 +216,10 @@ class Deployment(NetBoxModel):
         verbose_name="Diffusé à l'externe",
         help_text="Accessible hors du réseau interne. Détermine l'ouverture de flux pare-feu.",
     )
-    url = models.URLField(blank=True, verbose_name="URL d'accès")
+    # Nommé « access_url » et non « url » : NetBox expose un champ « url »
+    # hypermedia sur chaque objet. Un champ de modèle portant le même nom
+    # obligeait à un contournement dans le sérialiseur.
+    access_url = models.URLField(blank=True, verbose_name="URL d'accès")
 
     virtual_machines = models.ManyToManyField(
         to="virtualization.VirtualMachine",
