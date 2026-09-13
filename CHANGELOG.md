@@ -3,6 +3,24 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.2.1] — 2026-09-13
+
+### Corrigé
+
+- **Le panneau « Déploiements » affichait du texte parasite et des objets Python.**
+  Deux causes, invisibles à l'analyse statique :
+  - un commentaire `{# … #}` écrit sur **plusieurs lignes** — la syntaxe de Django est
+    **monoligne**, si bien que seule la première était consommée et le reste s'affichait ;
+  - `linkify:"get_environment_display"` — le filtre fait un `getattr`, qui sur une **méthode**
+    retourne l'objet méthode : d'où les `functools.partial` affichés dans la colonne
+    Environnement.
+
+### Ajouté
+
+- **L'intégration continue rend désormais réellement les gabarits** et échoue s'ils contiennent
+  du texte parasite (`{#`, `{{`, `functools.partial`…). C'est le contrôle qui aurait attrapé le
+  bug ci-dessus : aucun lint ne le voyait.
+
 ## [0.2.0] — 2026-09-13
 
 ### Corrigé

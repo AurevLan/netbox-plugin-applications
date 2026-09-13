@@ -79,12 +79,16 @@
           </thead>
           <tbody>
           {% for d in object.deployments.all %}
+            {# Le lien vers le déploiement est construit à la main : le filtre #}
+            {# « linkify » avec un argument fait un getattr, qui sur une méthode #}
+            {# retourne l'objet méthode et non son résultat. #}
             <tr>
-              <td>{{ d|linkify:"get_environment_display" }}</td>
+              <td>
+                <a href="{{ d.get_absolute_url }}">
+                  {% badge d.get_environment_display bg_color=d.get_environment_color %}
+                </a>
+              </td>
               <td>{% badge d.get_status_display bg_color=d.get_status_color %}</td>
-              {# L'URL figure ICI : c'est sur la fiche de l'application qu'on
-                 cherche « où est la recette ? ». Obliger à ouvrir chaque
-                 déploiement donnait l'impression qu'il n'y avait qu'une URL. #}
               <td>
                 {% if d.access_url %}
                   <a href="{{ d.access_url }}" target="_blank" rel="noopener">{{ d.access_url }}</a>

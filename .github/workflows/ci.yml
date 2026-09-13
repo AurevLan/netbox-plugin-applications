@@ -99,4 +99,42 @@ jobs:
             -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
             -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
             netbox-plugin-test \
-            /opt/netbox/netbox/manage.py migrate netbox_applications
+            /opt/netbox/netbox/manage.py migrate
+
+      # Un gabarit peut être syntaxiquement accepté par Django et produire du
+      # texte parasite : un commentaire {# … #} sur plusieurs lignes n'est PAS
+      # un commentaire, et un filtre appliqué à une méthode affiche l'objet
+      # méthode. Aucun lint ne le voit — seul le rendu le révèle.
+      - name: Rendre réellement les gabarits
+        run: |
+          docker run --rm --network host \
+            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
+            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
+            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
+            netbox-plugin-test \
+            /opt/netbox/netbox/manage.py shell -c "
+          from django.template.loader import render_to_string
+          from django.test import RequestFactory
+          from django.contrib.auth import get_user_model
+          from netbox_applications.models import Application, Deployment
+
+          U = get_user_model()
+          user = U.objects.create_superuser('ci', 'ci@example.invalid', 'x')
+          app = Application.objects.create(name='ci-app')
+          dep = Deployment.objects.create(application=app, environment='production')
+          req = RequestFactory().get('/'); req.user = user
+
+          echecs = []
+          for gabarit, ctx in (
+              ('netbox_applications/application.html', {'object': app}),
+              ('netbox_applications/deployment.html', {'object': dep}),
+          ):
+              html = render_to_string(gabarit, ctx, request=req)
+              # Texte qui ne devrait JAMAIS apparaître dans une page rendue.
+              for motif in ('functools.partial', '{#', '#}', '{{', '{%'):
+                  if motif in html:
+                      echecs.append(f'{gabarit} : « {motif} » présent dans le rendu')
+          if echecs:
+              raise SystemExit('ECHEC\n' + '\n'.join(echecs))
+          print('Gabarits rendus sans texte parasite.')
+          "
