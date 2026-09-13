@@ -1,23 +1,75 @@
 from rest_framework import serializers
 
-from netbox.api.fields import ChoiceField
 from netbox.api.serializers import NetBoxModelSerializer
 from tenancy.api.serializers import ContactSerializer, TenantSerializer
 from virtualization.api.serializers import VirtualMachineSerializer
 
-from ..choices import (
-    AuthenticationChoices,
-    CriticalityChoices,
-    DataClassificationChoices,
-    DeploymentStatusChoices,
-    EnvironmentChoices,
-    LifecycleChoices,
-    MaintenanceWindowChoices,
-    RPOChoices,
-    RTOChoices,
-    ServiceHoursChoices,
+from .. import models
+
+# --- Référentiels --------------------------------------------------------------
+
+
+def _reference_serializer(modele, champs_extra=()):
+    """Fabrique le sérialiseur d'un référentiel.
+
+    Les dix référentiels partagent la même forme ; seuls leurs attributs
+    propres diffèrent. Une fabrique garantit qu'ils restent alignés.
+    """
+    n = modele.__name__.lower()
+    base_fields = (
+        "id",
+        "url",
+        "display",
+        "name",
+        "slug",
+        "description",
+        "color",
+        "weight",
+        "tags",
+        "custom_fields",
+        "created",
+        "last_updated",
+    )
+    meta = type(
+        "Meta",
+        (),
+        {
+            "model": modele,
+            "fields": (*base_fields, *champs_extra),
+            "brief_fields": ("id", "url", "display", "name", "slug", "color"),
+        },
+    )
+    return type(
+        f"{modele.__name__}Serializer",
+        (NetBoxModelSerializer,),
+        {
+            "url": serializers.HyperlinkedIdentityField(
+                view_name=f"plugins-api:netbox_applications-api:{n}-detail"
+            ),
+            "Meta": meta,
+        },
+    )
+
+
+LifecycleStatusSerializer = _reference_serializer(models.LifecycleStatus, ("is_operational",))
+CriticalitySerializer = _reference_serializer(models.Criticality, ("incident_priority", "requires_oncall"))
+RTOSerializer = _reference_serializer(models.RTO, ("minutes",))
+RPOSerializer = _reference_serializer(models.RPO, ("minutes",))
+ServiceHoursSerializer = _reference_serializer(
+    models.ServiceHours, ("start_time", "end_time", "includes_weekend", "includes_oncall")
 )
-from ..models import Application, Deployment
+DataClassificationSerializer = _reference_serializer(
+    models.DataClassification, ("level", "requires_encryption")
+)
+AuthenticationMethodSerializer = _reference_serializer(models.AuthenticationMethod, ("is_centralized",))
+EnvironmentSerializer = _reference_serializer(models.Environment, ("is_production",))
+DeploymentStatusSerializer = _reference_serializer(models.DeploymentStatus, ("is_active",))
+MaintenanceWindowSerializer = _reference_serializer(
+    models.MaintenanceWindow, ("start_time", "end_time", "allows_interruption")
+)
+
+
+# --- Fiche applicative ---------------------------------------------------------
 
 
 class ApplicationSerializer(NetBoxModelSerializer):
@@ -27,18 +79,20 @@ class ApplicationSerializer(NetBoxModelSerializer):
     client = TenantSerializer(nested=True, required=False, allow_null=True)
     technical_contact = ContactSerializer(nested=True, required=False, allow_null=True)
     project_manager = ContactSerializer(nested=True, required=False, allow_null=True)
-    # ChoiceField expose {value, label} : l'API se lit sans connaître les codes.
-    lifecycle_status = ChoiceField(choices=LifecycleChoices, required=False)
-    criticality = ChoiceField(choices=CriticalityChoices, required=False)
-    rto = ChoiceField(choices=RTOChoices, required=False, allow_blank=True)
-    rpo = ChoiceField(choices=RPOChoices, required=False, allow_blank=True)
-    service_hours = ChoiceField(choices=ServiceHoursChoices, required=False, allow_blank=True)
-    data_classification = ChoiceField(choices=DataClassificationChoices, required=False)
-    authentication = ChoiceField(choices=AuthenticationChoices, required=False, allow_blank=True)
+    # Les référentiels sont des objets : l'API expose leur fiche complète en
+    # forme abrégée, pas seulement une valeur. On peut ainsi lire
+    # « authentication.is_centralized » sans requête supplémentaire.
+    lifecycle_status = LifecycleStatusSerializer(nested=True, required=False, allow_null=True)
+    criticality = CriticalitySerializer(nested=True, required=False, allow_null=True)
+    rto = RTOSerializer(nested=True, required=False, allow_null=True)
+    rpo = RPOSerializer(nested=True, required=False, allow_null=True)
+    service_hours = ServiceHoursSerializer(nested=True, required=False, allow_null=True)
+    data_classification = DataClassificationSerializer(nested=True, required=False, allow_null=True)
+    authentication = AuthenticationMethodSerializer(nested=True, required=False, allow_null=True)
     deployment_count = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = Application
+        model = models.Application
         fields = (
             "id",
             "url",
@@ -73,13 +127,13 @@ class DeploymentSerializer(NetBoxModelSerializer):
         view_name="plugins-api:netbox_applications-api:deployment-detail"
     )
     application = ApplicationSerializer(nested=True)
-    environment = ChoiceField(choices=EnvironmentChoices)
-    status = ChoiceField(choices=DeploymentStatusChoices, required=False)
-    maintenance_window = ChoiceField(choices=MaintenanceWindowChoices, required=False)
+    environment = EnvironmentSerializer(nested=True)
+    status = DeploymentStatusSerializer(nested=True, required=False, allow_null=True)
+    maintenance_window = MaintenanceWindowSerializer(nested=True, required=False, allow_null=True)
     virtual_machines = VirtualMachineSerializer(nested=True, many=True, required=False)
 
     class Meta:
-        model = Deployment
+        model = models.Deployment
         fields = (
             "id",
             "url",

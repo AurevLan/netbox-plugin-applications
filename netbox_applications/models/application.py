@@ -19,19 +19,6 @@ from django.urls import reverse
 
 from netbox.models import NetBoxModel
 
-from .choices import (
-    AuthenticationChoices,
-    CriticalityChoices,
-    DataClassificationChoices,
-    DeploymentStatusChoices,
-    EnvironmentChoices,
-    LifecycleChoices,
-    MaintenanceWindowChoices,
-    RPOChoices,
-    RTOChoices,
-    ServiceHoursChoices,
-)
-
 
 class Application(NetBoxModel):
     """Fiche applicative — le service, indépendamment de ses déploiements."""
@@ -58,61 +45,75 @@ class Application(NetBoxModel):
     )
 
     # --- Cycle de vie et criticité (ITIL) ---
-    lifecycle_status = models.CharField(
-        max_length=30,
-        choices=LifecycleChoices,
-        default=LifecycleChoices.PLANNED,
+    lifecycle_status = models.ForeignKey(
+        to="netbox_applications.LifecycleStatus",
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name="Statut du service",
+        null=True,
+        blank=True,
     )
-    criticality = models.CharField(
-        max_length=30,
-        choices=CriticalityChoices,
-        default=CriticalityChoices.STANDARD,
+    criticality = models.ForeignKey(
+        to="netbox_applications.Criticality",
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name="Criticité métier",
+        null=True,
+        blank=True,
         help_text="Détermine la sévérité de supervision et la priorité d'incident.",
     )
 
     # --- Continuité de service ---
-    rto = models.CharField(
-        max_length=20,
-        choices=RTOChoices,
-        blank=True,
+    rto = models.ForeignKey(
+        to="netbox_applications.RTO",
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name="RTO",
+        null=True,
+        blank=True,
         help_text="Durée maximale d'interruption admise.",
     )
-    rpo = models.CharField(
-        max_length=20,
-        choices=RPOChoices,
-        blank=True,
+    rpo = models.ForeignKey(
+        to="netbox_applications.RPO",
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name="RPO",
+        null=True,
+        blank=True,
         help_text="Perte de données admise. Conditionne la fréquence des sauvegardes.",
     )
-    service_hours = models.CharField(
-        max_length=30,
-        choices=ServiceHoursChoices,
-        blank=True,
+    service_hours = models.ForeignKey(
+        to="netbox_applications.ServiceHours",
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name="Horaires de service",
+        null=True,
+        blank=True,
         help_text="Quand le service doit être supporté — à ne pas confondre avec la plage de maintenance.",
     )
 
     # --- Sécurité et conformité ---
-    data_classification = models.CharField(
-        max_length=30,
-        choices=DataClassificationChoices,
-        default=DataClassificationChoices.INTERNAL,
+    data_classification = models.ForeignKey(
+        to="netbox_applications.DataClassification",
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name="Classification des données",
+        null=True,
+        blank=True,
     )
     personal_data = models.BooleanField(
         default=False,
         verbose_name="Données personnelles (RGPD)",
         help_text="L'application traite-t-elle des données à caractère personnel ?",
     )
-    authentication = models.CharField(
-        max_length=30,
-        choices=AuthenticationChoices,
-        blank=True,
+    authentication = models.ForeignKey(
+        to="netbox_applications.AuthenticationMethod",
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name="Authentification",
-        help_text="« Locale » signale des comptes échappant à la révocation centralisée.",
+        null=True,
+        blank=True,
+        help_text="Une méthode non centralisée signale des comptes échappant à la révocation.",
     )
 
     # --- Référents ---
@@ -160,28 +161,6 @@ class Application(NetBoxModel):
             self.application_id = f"APP-{self.pk:04d}"
             super().save(update_fields=["application_id"])
 
-    # Couleurs des badges, lues par le gabarit.
-    def get_lifecycle_status_color(self):
-        return LifecycleChoices.colors.get(self.lifecycle_status)
-
-    def get_criticality_color(self):
-        return CriticalityChoices.colors.get(self.criticality)
-
-    def get_data_classification_color(self):
-        return DataClassificationChoices.colors.get(self.data_classification)
-
-    def get_authentication_color(self):
-        return AuthenticationChoices.colors.get(self.authentication)
-
-    def get_rto_color(self):
-        return RTOChoices.colors.get(self.rto)
-
-    def get_rpo_color(self):
-        return RPOChoices.colors.get(self.rpo)
-
-    def get_service_hours_color(self):
-        return ServiceHoursChoices.colors.get(self.service_hours)
-
 
 class Deployment(NetBoxModel):
     """Instance d'une application dans un environnement donné."""
@@ -192,23 +171,28 @@ class Deployment(NetBoxModel):
         related_name="deployments",
         verbose_name="Application",
     )
-    environment = models.CharField(
-        max_length=30,
-        choices=EnvironmentChoices,
+    environment = models.ForeignKey(
+        to="netbox_applications.Environment",
+        on_delete=models.PROTECT,
+        related_name="deployments",
         verbose_name="Environnement",
     )
-    status = models.CharField(
-        max_length=30,
-        choices=DeploymentStatusChoices,
-        default=DeploymentStatusChoices.ACTIVE,
+    status = models.ForeignKey(
+        to="netbox_applications.DeploymentStatus",
+        on_delete=models.PROTECT,
+        related_name="deployments",
         verbose_name="Statut",
+        null=True,
+        blank=True,
     )
 
-    maintenance_window = models.CharField(
-        max_length=30,
-        choices=MaintenanceWindowChoices,
-        default=MaintenanceWindowChoices.UNDEFINED,
+    maintenance_window = models.ForeignKey(
+        to="netbox_applications.MaintenanceWindow",
+        on_delete=models.PROTECT,
+        related_name="deployments",
         verbose_name="Plage de maintenance",
+        null=True,
+        blank=True,
         help_text="Quand une interruption est admise SUR CET ENVIRONNEMENT.",
     )
     external_facing = models.BooleanField(
@@ -246,7 +230,7 @@ class Deployment(NetBoxModel):
         ]
 
     def __str__(self):
-        return f"{self.application.name} — {self.get_environment_display()}"
+        return f"{self.application.name} — {self.environment}"
 
     def get_absolute_url(self):
         return reverse("plugins:netbox_applications:deployment", args=[self.pk])
@@ -267,12 +251,3 @@ class Deployment(NetBoxModel):
                         )
                     }
                 )
-
-    def get_environment_color(self):
-        return EnvironmentChoices.colors.get(self.environment)
-
-    def get_status_color(self):
-        return DeploymentStatusChoices.colors.get(self.status)
-
-    def get_maintenance_window_color(self):
-        return MaintenanceWindowChoices.colors.get(self.maintenance_window)

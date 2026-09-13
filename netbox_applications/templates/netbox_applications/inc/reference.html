@@ -1,0 +1,8 @@
+{# Affiche un référentiel : badge coloré, cliquable vers sa fiche. #}
+{# Usage : {% include "netbox_applications/inc/reference.html" with ref=object.criticality %} #}
+{% load helpers %}
+{% if ref %}
+  <a href="{{ ref.get_absolute_url }}">{% badge ref.name bg_color=ref.color %}</a>
+{% else %}
+  {{ ''|placeholder }}
+{% endif %}

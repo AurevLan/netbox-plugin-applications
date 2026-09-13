@@ -22,9 +22,9 @@
       <h2 class="card-header">Cycle de vie</h2>
       <table class="table table-hover attr-table">
         <tr><th scope="row">Statut du service</th>
-            <td>{% badge object.get_lifecycle_status_display bg_color=object.get_lifecycle_status_color %}</td></tr>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.lifecycle_status %}</td></tr>
         <tr><th scope="row">Criticité métier</th>
-            <td>{% badge object.get_criticality_display bg_color=object.get_criticality_color %}</td></tr>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.criticality %}</td></tr>
       </table>
     </div>
 
@@ -46,11 +46,11 @@
       <h2 class="card-header">Continuité de service</h2>
       <table class="table table-hover attr-table">
         <tr><th scope="row">RTO <small class="text-muted">interruption admise</small></th>
-            <td>{% if object.rto %}{% badge object.get_rto_display bg_color=object.get_rto_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.rto %}</td></tr>
         <tr><th scope="row">RPO <small class="text-muted">perte de données admise</small></th>
-            <td>{% if object.rpo %}{% badge object.get_rpo_display bg_color=object.get_rpo_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.rpo %}</td></tr>
         <tr><th scope="row">Horaires de service</th>
-            <td>{% if object.service_hours %}{% badge object.get_service_hours_display bg_color=object.get_service_hours_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.service_hours %}</td></tr>
       </table>
     </div>
 
@@ -58,11 +58,11 @@
       <h2 class="card-header">Sécurité et conformité</h2>
       <table class="table table-hover attr-table">
         <tr><th scope="row">Classification des données</th>
-            <td>{% badge object.get_data_classification_display bg_color=object.get_data_classification_color %}</td></tr>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.data_classification %}</td></tr>
         <tr><th scope="row">Données personnelles (RGPD)</th>
             <td>{% checkmark object.personal_data %}</td></tr>
         <tr><th scope="row">Authentification</th>
-            <td>{% if object.authentication %}{% badge object.get_authentication_display bg_color=object.get_authentication_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.authentication %}</td></tr>
       </table>
     </div>
 
@@ -85,16 +85,16 @@
             <tr>
               <td>
                 <a href="{{ d.get_absolute_url }}">
-                  {% badge d.get_environment_display bg_color=d.get_environment_color %}
+                  {% include "netbox_applications/inc/reference.html" with ref=d.environment %}
                 </a>
               </td>
-              <td>{% badge d.get_status_display bg_color=d.get_status_color %}</td>
+              <td>{% include "netbox_applications/inc/reference.html" with ref=d.status %}</td>
               <td>
                 {% if d.access_url %}
                   <a href="{{ d.access_url }}" target="_blank" rel="noopener">{{ d.access_url }}</a>
                 {% else %}{{ ''|placeholder }}{% endif %}
               </td>
-              <td>{% badge d.get_maintenance_window_display bg_color=d.get_maintenance_window_color %}</td>
+              <td>{% include "netbox_applications/inc/reference.html" with ref=d.maintenance_window %}</td>
               <td>{% checkmark d.external_facing %}</td>
               <td>{{ d.virtual_machines.count }}</td>
             </tr>

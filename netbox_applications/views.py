@@ -5,7 +5,88 @@ from utilities.views import ViewTab, register_model_view
 
 from . import filtersets, forms, models, tables
 
-# --- Application -------------------------------------------------------------
+# --- Référentiels --------------------------------------------------------------
+#
+# Dix référentiels, cinq vues chacun : chacun feraient cinquante classes quasi
+# identiques. La fabrique ci-dessous les produit à partir d'une seule
+# description : une correction s'applique alors aux dix d'un coup, et il
+# devient impossible d'en oublier un.
+
+_REFERENCES = (
+    # (modèle, table, filtre, formulaire)
+    (
+        models.LifecycleStatus,
+        tables.LifecycleStatusTable,
+        filtersets.LifecycleStatusFilterSet,
+        forms.LifecycleStatusForm,
+    ),
+    (models.Criticality, tables.CriticalityTable, filtersets.CriticalityFilterSet, forms.CriticalityForm),
+    (models.RTO, tables.RTOTable, filtersets.RTOFilterSet, forms.RTOForm),
+    (models.RPO, tables.RPOTable, filtersets.RPOFilterSet, forms.RPOForm),
+    (models.ServiceHours, tables.ServiceHoursTable, filtersets.ServiceHoursFilterSet, forms.ServiceHoursForm),
+    (
+        models.DataClassification,
+        tables.DataClassificationTable,
+        filtersets.DataClassificationFilterSet,
+        forms.DataClassificationForm,
+    ),
+    (
+        models.AuthenticationMethod,
+        tables.AuthenticationMethodTable,
+        filtersets.AuthenticationMethodFilterSet,
+        forms.AuthenticationMethodForm,
+    ),
+    (models.Environment, tables.EnvironmentTable, filtersets.EnvironmentFilterSet, forms.EnvironmentForm),
+    (
+        models.DeploymentStatus,
+        tables.DeploymentStatusTable,
+        filtersets.DeploymentStatusFilterSet,
+        forms.DeploymentStatusForm,
+    ),
+    (
+        models.MaintenanceWindow,
+        tables.MaintenanceWindowTable,
+        filtersets.MaintenanceWindowFilterSet,
+        forms.MaintenanceWindowForm,
+    ),
+)
+
+
+def _build_reference_views(modele, table, filtre, formulaire):
+    """Produit les cinq vues d'un référentiel et les expose dans ce module."""
+    nom = modele.__name__
+    qs = modele.objects.all()
+    classes = {
+        f"{nom}View": type(f"{nom}View", (generic.ObjectView,), {"queryset": qs}),
+        f"{nom}ListView": type(
+            f"{nom}ListView",
+            (generic.ObjectListView,),
+            {
+                "queryset": qs,
+                "table": table,
+                "filterset": filtre,
+                "filterset_form": forms.ReferenceFilterForm,
+            },
+        ),
+        f"{nom}EditView": type(
+            f"{nom}EditView", (generic.ObjectEditView,), {"queryset": qs, "form": formulaire}
+        ),
+        # La suppression échoue si la valeur est employée : les clés étrangères
+        # sont en PROTECT. C'est voulu — supprimer « Critique » ne doit pas
+        # vider silencieusement le champ de toutes les applications concernées.
+        f"{nom}DeleteView": type(f"{nom}DeleteView", (generic.ObjectDeleteView,), {"queryset": qs}),
+        f"{nom}BulkDeleteView": type(
+            f"{nom}BulkDeleteView", (generic.BulkDeleteView,), {"queryset": qs, "table": table}
+        ),
+    }
+    globals().update(classes)
+
+
+for _modele, _table, _filtre, _form in _REFERENCES:
+    _build_reference_views(_modele, _table, _filtre, _form)
+
+
+# --- Application ---------------------------------------------------------------
 
 
 class ApplicationView(generic.ObjectView):
@@ -14,11 +95,7 @@ class ApplicationView(generic.ObjectView):
 
 @register_model_view(models.Application, "deployments")
 class ApplicationDeploymentsView(generic.ObjectChildrenView):
-    """Onglet « Déploiements » sur la fiche d'une application.
-
-    Un onglet plutôt qu'un simple tableau dans la page : le nombre de
-    déploiements se lit alors sans ouvrir la fiche.
-    """
+    """Onglet « Déploiements » sur la fiche d'une application."""
 
     queryset = models.Application.objects.all()
     child_model = models.Deployment
@@ -57,7 +134,7 @@ class ApplicationBulkDeleteView(generic.BulkDeleteView):
     table = tables.ApplicationTable
 
 
-# --- Déploiement -------------------------------------------------------------
+# --- Déploiement ---------------------------------------------------------------
 
 
 class DeploymentView(generic.ObjectView):

@@ -3,6 +3,45 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.4.0] — 2026-09-13
+
+### Changé — modification structurante
+
+- **Les dix listes de valeurs deviennent des objets NetBox à part entière**, gérables dans
+  l'interface : leur propre page, un bouton « Ajouter », une suppression refusée si la valeur
+  est employée.
+  Ajouter « CAS » ou une fenêtre de maintenance propre à un client ne demande plus de modifier
+  la configuration du serveur ni de le redémarrer.
+- **Chaque référentiel porte des attributs, pas seulement un libellé.** Une convention tacite
+  devient une donnée interrogeable :
+
+  | Référentiel | Attribut | Ce qu'il permet |
+  |---|---|---|
+  | Authentification | `is_centralized` | « quelles applications ont des comptes échappant à la révocation ? » — sans supposer que la valeur s'appelle « locale » |
+  | RTO, RPO | `minutes` | comparer et trier : « RPO inférieur à 2 heures » devient une requête |
+  | Criticité | `incident_priority`, `requires_oncall` | relier la fiche au traitement des incidents |
+  | Classification | `level`, `requires_encryption` | « au moins confidentiel » devient une requête |
+  | Environnement | `is_production` | des règles plus strictes, sans liste de noms à maintenir |
+  | Statut de service | `is_operational` | « réellement en service », quel que soit le libellé |
+  | Maintenance, horaires | heures de début et de fin | exploitables par un script |
+
+- Les filtres interrogent désormais ces attributs : `?authentication_centralized=false`,
+  `?operational=true`, `?production=true`.
+
+### Migration
+
+Trois étapes, **aucune donnée perdue** : création des référentiels, transfert des valeurs,
+puis nettoyage. Les valeurs existantes sont reprises avec leurs libellés et leurs couleurs.
+Une valeur inconnue du plugin — ajoutée par `FIELD_CHOICES` — donne lieu à un référentiel créé
+à la volée plutôt qu'à une perte silencieuse.
+
+Vérifié sur une copie d'une base réelle avant publication.
+
+### Retiré
+
+- `FIELD_CHOICES` n'est plus nécessaire pour ce plugin : les valeurs vivent en base.
+  Le fichier `choices.py` disparaît.
+
 ## [0.3.0] — 2026-09-13
 
 ### Ajouté
