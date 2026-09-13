@@ -213,9 +213,15 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
     model = Application
     fieldsets = (
         FieldSet("q", "filter_id", "tag"),
-        FieldSet("lifecycle_status_id", "criticality_id", name="Cycle de vie"),
+        FieldSet("lifecycle_status_id", "operational", "criticality_id", name="Cycle de vie"),
         FieldSet("rto_id", "rpo_id", "service_hours_id", name="Continuité"),
-        FieldSet("data_classification_id", "personal_data", "authentication_id", name="Sécurité"),
+        FieldSet(
+            "data_classification_id",
+            "personal_data",
+            "authentication_id",
+            "authentication_centralized",
+            name="Sécurité",
+        ),
         FieldSet("client_id", "technical_contact_id", "project_manager_id", name="Rattachements"),
         FieldSet("environment_id", name="Déploiements"),
     )
@@ -238,6 +244,11 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
         queryset=AuthenticationMethod.objects.all(), required=False, label="Authentification"
     )
     personal_data = forms.NullBooleanField(required=False, label="Données personnelles")
+    # Filtres portant sur un ATTRIBUT du référentiel, pas sur son nom : ils
+    # survivent au renommage d'une valeur. Sans entrée dans un « fieldset »,
+    # ils n'existeraient que pour l'API.
+    operational = forms.NullBooleanField(required=False, label="Réellement en service")
+    authentication_centralized = forms.NullBooleanField(required=False, label="Authentification centralisée")
     client_id = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False, label="Client")
     technical_contact_id = DynamicModelMultipleChoiceField(
         queryset=Contact.objects.all(), required=False, label="Référent technique"
@@ -290,7 +301,7 @@ class DeploymentFilterForm(NetBoxModelFilterSetForm):
     model = Deployment
     fieldsets = (
         FieldSet("q", "filter_id", "tag"),
-        FieldSet("application_id", "environment_id", "status_id", name="Identité"),
+        FieldSet("application_id", "environment_id", "production", "status_id", name="Identité"),
         FieldSet("maintenance_window_id", "external_facing", name="Exploitation"),
     )
 
@@ -300,6 +311,8 @@ class DeploymentFilterForm(NetBoxModelFilterSetForm):
     environment_id = DynamicModelMultipleChoiceField(
         queryset=Environment.objects.all(), required=False, label="Environnement"
     )
+    # Porte sur l'attribut « is_production » de l'environnement, pas sur son nom.
+    production = forms.NullBooleanField(required=False, label="En production")
     status_id = DynamicModelMultipleChoiceField(
         queryset=DeploymentStatus.objects.all(), required=False, label="Statut"
     )

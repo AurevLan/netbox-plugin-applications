@@ -3,6 +3,16 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.4.1] — 2026-09-14
+
+### Corrigé
+
+- **Les trois filtres par attribut — « Réellement en service », « Authentification
+  centralisée », « En production » — n'apparaissaient pas dans le panneau de filtres.** Ils
+  fonctionnaient par l'API, mais aucun « fieldset » ne les déclarait : ils étaient
+  inatteignables depuis l'interface. C'est exactement le défaut corrigé en 0.2.0 pour les
+  autres filtres, reproduit sur les nouveaux.
+
 ## [0.4.0] — 2026-09-13
 
 ### Changé — modification structurante
