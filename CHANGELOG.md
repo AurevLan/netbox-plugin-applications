@@ -3,6 +3,24 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.3.0] — 2026-09-13
+
+### Ajouté
+
+- **Les listes déroulantes sont extensibles par configuration.** Chaque `ChoiceSet` déclare
+  désormais une clé, ce qui permet d'ajouter ou de remplacer des choix via `FIELD_CHOICES`
+  **sans modifier le code du plugin ni attendre une version**. Un redémarrage suffit.
+- Filtres supplémentaires sur les applications : RTO, RPO, horaires de service, client,
+  référents, et **environnement de déploiement** — ce dernier traverse la relation et répond à
+  « quelles applications sont en production ? ».
+
+### Corrigé
+
+- **Les filtres étaient présents mais introuvables.** Sans `fieldsets`, NetBox les affichait à
+  la suite, sans titre ni regroupement, mêlés à `filter_id` et `q`. Des filtres qu'on ne trouve
+  pas reviennent à ne pas en avoir. Ils sont désormais groupés par section — dont une section
+  **Sécurité** qui porte l'authentification.
+
 ## [0.2.1] — 2026-09-13
 
 ### Corrigé

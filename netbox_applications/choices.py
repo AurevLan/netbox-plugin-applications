@@ -1,5 +1,27 @@
 """Listes déroulantes de la fiche applicative.
 
+CHAQUE LISTE DÉCLARE UNE CLÉ, et ce n'est pas décoratif : c'est ce qui permet
+d'ajouter ou de remplacer des choix PAR CONFIGURATION, sans modifier le code
+du plugin ni attendre une nouvelle version.
+
+Dans la configuration de NetBox :
+
+    FIELD_CHOICES = {
+        # Ajouter aux choix existants — noter le « + » final
+        "netbox_applications.Application.authentication+": [
+            ("cas", "CAS", "cyan"),
+            ("kerberos", "Kerberos", "purple"),
+        ],
+        # Remplacer entièrement la liste — sans le « + »
+        "netbox_applications.Deployment.maintenance_window": [
+            ("mardi-soir", "Mardi soir", "blue"),
+        ],
+    }
+
+Le préfixe « netbox_applications » est le nom du module du plugin ; NetBox le
+déduit lui-même. Un redémarrage suffit, aucune migration n'est nécessaire —
+les choix ne sont pas contraints en base.
+
 Définies en Python plutôt qu'en jeux de choix NetBox : elles font partie du
 modèle et doivent évoluer avec le code du plugin, pas par configuration.
 
@@ -15,6 +37,8 @@ from utilities.choices import ChoiceSet
 
 class LifecycleChoices(ChoiceSet):
     """Étapes du cycle de vie d'un service, au sens ITIL."""
+
+    key = "Application.lifecycle_status"
 
     PLANNED = "en-projet"
     ACTIVE = "en-service"
@@ -35,6 +59,8 @@ class CriticalityChoices(ChoiceSet):
     Détermine la sévérité de supervision et la priorité d'incident.
     """
 
+    key = "Application.criticality"
+
     CRITICAL = "critique"
     MAJOR = "majeure"
     STANDARD = "standard"
@@ -53,6 +79,8 @@ class CriticalityChoices(ChoiceSet):
 
 class RTOChoices(ChoiceSet):
     """Durée maximale d'interruption admise (Recovery Time Objective)."""
+
+    key = "Application.rto"
 
     RTO_15M = "15m"
     RTO_1H = "1h"
@@ -80,6 +108,8 @@ class RPOChoices(ChoiceSet):
     impose une sauvegarde horaire, pas quotidienne.
     """
 
+    key = "Application.rpo"
+
     RPO_ZERO = "0"
     RPO_15M = "15m"
     RPO_1H = "1h"
@@ -104,6 +134,8 @@ class ServiceHoursChoices(ChoiceSet):
     interrompre. Les horaires de service disent quand on doit répondre.
     """
 
+    key = "Application.service_hours"
+
     H24_7 = "24-7"
     EXTENDED = "7h-20h"
     OFFICE = "8h-18h"
@@ -127,6 +159,8 @@ class DataClassificationChoices(ChoiceSet):
     niveau d'exigence des règles pare-feu.
     """
 
+    key = "Application.data_classification"
+
     PUBLIC = "public"
     INTERNAL = "interne"
     CONFIDENTIAL = "confidentiel"
@@ -146,6 +180,8 @@ class AuthenticationChoices(ChoiceSet):
     « Locale » signale une base de comptes propre à l'application : c'est le
     cas à surveiller, puisqu'il échappe à la révocation centralisée.
     """
+
+    key = "Application.authentication"
 
     KEYCLOAK = "keycloak"
     OIDC = "oidc"
@@ -170,6 +206,8 @@ class AuthenticationChoices(ChoiceSet):
 
 
 class EnvironmentChoices(ChoiceSet):
+    key = "Deployment.environment"
+
     PRODUCTION = "production"
     PREPRODUCTION = "preproduction"
     RECETTE = "recette"
@@ -185,6 +223,8 @@ class EnvironmentChoices(ChoiceSet):
 
 class MaintenanceWindowChoices(ChoiceSet):
     """Créneaux pendant lesquels une interruption est admise."""
+
+    key = "Deployment.maintenance_window"
 
     OFF_HOURS = "hors-heures-ouvrees"
     WEEKEND = "week-end"
@@ -204,6 +244,8 @@ class MaintenanceWindowChoices(ChoiceSet):
 
 
 class DeploymentStatusChoices(ChoiceSet):
+    key = "Deployment.status"
+
     ACTIVE = "actif"
     PLANNED = "planifie"
     DECOMMISSIONING = "en-demantelement"

@@ -18,6 +18,9 @@ from .choices import (
     EnvironmentChoices,
     LifecycleChoices,
     MaintenanceWindowChoices,
+    RPOChoices,
+    RTOChoices,
+    ServiceHoursChoices,
 )
 from .models import Application, Deployment
 
@@ -73,7 +76,23 @@ class ApplicationForm(NetBoxModelForm):
 
 
 class ApplicationFilterForm(NetBoxModelFilterSetForm):
+    """Filtres de la liste des applications.
+
+    Les « fieldsets » ne sont pas cosmétiques : sans eux, NetBox affiche les
+    champs à la suite, sans titre ni regroupement, mêlés à « filter_id » et
+    « q ». Les filtres existent alors mais restent introuvables — ce qui revient
+    à ne pas les avoir.
+    """
+
     model = Application
+    fieldsets = (
+        FieldSet("q", "filter_id", "tag"),
+        FieldSet("lifecycle_status", "criticality", name="Cycle de vie"),
+        FieldSet("rto", "rpo", "service_hours", name="Continuité"),
+        FieldSet("data_classification", "personal_data", "authentication", name="Sécurité"),
+        FieldSet("client_id", "technical_contact_id", "project_manager_id", name="Rattachements"),
+        FieldSet("environment", name="Déploiements"),
+    )
     lifecycle_status = forms.MultipleChoiceField(choices=LifecycleChoices, required=False, label="Statut")
     criticality = forms.MultipleChoiceField(choices=CriticalityChoices, required=False, label="Criticité")
     data_classification = forms.MultipleChoiceField(
@@ -83,6 +102,24 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
         choices=AuthenticationChoices, required=False, label="Authentification"
     )
     personal_data = forms.NullBooleanField(required=False, label="Données personnelles")
+    rto = forms.MultipleChoiceField(choices=RTOChoices, required=False, label="RTO")
+    rpo = forms.MultipleChoiceField(choices=RPOChoices, required=False, label="RPO")
+    service_hours = forms.MultipleChoiceField(
+        choices=ServiceHoursChoices, required=False, label="Horaires de service"
+    )
+    # Filtrer les applications PAR environnement de déploiement : c'est la
+    # question qu'on pose réellement (« lesquelles sont en production ? »),
+    # et elle traverse la relation.
+    environment = forms.MultipleChoiceField(
+        choices=EnvironmentChoices, required=False, label="Environnement de déploiement"
+    )
+    client_id = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False, label="Client")
+    technical_contact_id = DynamicModelMultipleChoiceField(
+        queryset=Contact.objects.all(), required=False, label="Référent technique"
+    )
+    project_manager_id = DynamicModelMultipleChoiceField(
+        queryset=Contact.objects.all(), required=False, label="Référent chef de projet"
+    )
 
 
 class DeploymentForm(NetBoxModelForm):
@@ -119,6 +156,11 @@ class DeploymentForm(NetBoxModelForm):
 
 class DeploymentFilterForm(NetBoxModelFilterSetForm):
     model = Deployment
+    fieldsets = (
+        FieldSet("q", "filter_id", "tag"),
+        FieldSet("application_id", "environment", "status", name="Identité"),
+        FieldSet("maintenance_window", "external_facing", name="Exploitation"),
+    )
     application_id = DynamicModelMultipleChoiceField(
         queryset=Application.objects.all(), required=False, label="Application"
     )

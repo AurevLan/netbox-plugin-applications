@@ -274,6 +274,64 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 > qui pointe vers l'objet lui-même. L'adresse d'accès de l'application porte donc un nom
 > distinct.
 
+### Ajouter un choix sans modifier le code
+
+Toutes les listes déroulantes sont **extensibles par configuration**. Dans la configuration de
+NetBox (`configuration/extra.py` avec `netbox-docker`) :
+
+```python
+FIELD_CHOICES = {
+    # AJOUTER aux choix existants — noter le « + » final
+    "netbox_applications.Application.authentication+": [
+        ("cas", "CAS", "cyan"),
+        ("kerberos", "Kerberos", "purple"),
+    ],
+
+    # REMPLACER entièrement la liste — sans le « + »
+    "netbox_applications.Deployment.maintenance_window": [
+        ("mardi-soir", "Mardi soir 20h-22h", "blue"),
+        ("aucune", "Aucune", "red"),
+    ],
+}
+```
+
+Un **redémarrage suffit** : aucune migration n'est nécessaire, les choix ne sont pas contraints
+en base. Le troisième élément de chaque tuple est la couleur du badge.
+
+#### Clés disponibles
+
+| Clé | Champ |
+|---|---|
+| `netbox_applications.Application.lifecycle_status` | Statut du service |
+| `netbox_applications.Application.criticality` | Criticité métier |
+| `netbox_applications.Application.rto` | RTO |
+| `netbox_applications.Application.rpo` | RPO |
+| `netbox_applications.Application.service_hours` | Horaires de service |
+| `netbox_applications.Application.data_classification` | Classification |
+| `netbox_applications.Application.authentication` | Authentification |
+| `netbox_applications.Deployment.environment` | Environnement |
+| `netbox_applications.Deployment.maintenance_window` | Plage de maintenance |
+| `netbox_applications.Deployment.status` | Statut du déploiement |
+
+> **Attention en cas de remplacement** : retirer une valeur déjà employée par des fiches
+> existantes ne les modifie pas — elles conservent la valeur en base, mais le libellé et la
+> couleur disparaissent. Préférez le `+` sauf à vouloir réellement repartir d'une liste propre.
+
+### Filtrer dans l'interface
+
+La liste des applications propose un panneau de filtres **regroupé par section** :
+
+| Section | Filtres |
+|---|---|
+| Cycle de vie | statut du service, criticité |
+| Continuité | RTO, RPO, horaires de service |
+| **Sécurité** | classification, données personnelles, **authentification** |
+| Rattachements | client, référent technique, référent chef de projet |
+| Déploiements | **environnement** — traverse la relation |
+
+Le filtre **Environnement** répond à « quelles applications sont en production ? » : il porte
+sur les déploiements, pas sur l'application elle-même.
+
 ### Filtres utiles
 
 | Question | Filtre |
