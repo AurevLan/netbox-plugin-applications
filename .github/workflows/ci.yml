@@ -1,0 +1,102 @@
+name: Contrôles
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Une vulnérabilité peut apparaître dans une dépendance SANS qu'on touche au
+  # code : l'audit doit donc tourner aussi sur un rythme régulier.
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  qualite:
+    name: Qualité du code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - name: Style, imports et pièges courants
+        run: ruff check --output-format=github .
+      - name: Formatage
+        run: ruff format --check .
+
+  securite:
+    name: Sécurité
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Motifs dangereux (bandit)
+        run: bandit -c pyproject.toml -r netbox_applications
+      - name: Vulnérabilités des dépendances (pip-audit)
+        run: pip-audit --strict
+      - name: Secrets commités (detect-secrets)
+        run: |
+          detect-secrets scan --baseline .secrets.baseline
+          detect-secrets audit --report --fail-on-unaudited .secrets.baseline
+
+  construction:
+    name: Construction du paquet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - run: python -m build
+      # twine check attrape les métadonnées invalides AVANT publication —
+      # un paquet refusé par PyPI après coup est bien plus pénible.
+      - run: twine check dist/*
+
+  integration:
+    name: Chargement réel dans NetBox
+    runs-on: ubuntu-latest
+    # C'est le contrôle qui compte : un plugin qui passe le lint mais ne se
+    # charge pas dans NetBox n'a aucune valeur.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: netbox
+          POSTGRES_PASSWORD: netbox
+          POSTGRES_DB: netbox
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ["5432:5432"]
+      redis:
+        image: valkey/valkey:9.1-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Construire une image NetBox avec le plugin
+        run: |
+          cat > Dockerfile.test <<'DOCKER'
+          FROM netboxcommunity/netbox:v4.7-5.1.1
+          USER root
+          COPY . /plugin/
+          RUN uv pip install --no-cache /plugin/
+          RUN printf 'PLUGINS = ["netbox_applications"]\n' > /etc/netbox/config/extra.py
+          USER 999
+          DOCKER
+          docker build -f Dockerfile.test -t netbox-plugin-test .
+      - name: Vérifier que le plugin se charge et que les migrations passent
+        run: |
+          docker run --rm --network host \
+            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
+            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
+            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
+            netbox-plugin-test \
+            /opt/netbox/netbox/manage.py migrate netbox_applications

@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Les versions des outils de développement sont épinglées à l'exact dans
+  # pyproject.toml : sans Dependabot, elles vieilliraient en silence et les
+  # contrôles de sécurité tourneraient avec des bases de vulnérabilités périmées.
+  - package-ecosystem: pip
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    labels: ["dépendances"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    labels: ["ci"]

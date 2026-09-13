@@ -1,0 +1,26 @@
+name: CodeQL
+
+# Analyse statique de sécurité par GitHub. Complète bandit : CodeQL suit les
+# flux de données entre fonctions, là où bandit reconnaît des motifs locaux.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          queries: security-and-quality
+      - uses: github/codeql-action/analyze@v4

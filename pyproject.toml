@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netbox-plugin-applications"
+version = "0.1.0"
+description = "Catalogue applicatif CMDB pour NetBox : applications, déploiements multi-environnements, champs ITIL."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Aurelien" }]
+keywords = ["netbox", "netbox-plugin", "cmdb", "itil", "application"]
+classifiers = [
+    "Framework :: Django",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Systems Administration",
+]
+# Aucune dépendance déclarée : le plugin s'exécute DANS NetBox et n'utilise
+# que ce que NetBox fournit déjà. En ajouter une exposerait à un conflit de
+# version avec l'hôte, que rien ne résoudrait proprement.
+dependencies = []
+
+[project.urls]
+Source = "https://github.com/AurevLan/netbox-plugin-applications"
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.14.2",
+    "bandit[toml]==1.8.6",
+    "pip-audit==2.9.0",
+    "detect-secrets==1.5.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["netbox_applications*"]
+
+[tool.setuptools.package-data]
+netbox_applications = ["templates/**/*.html"]
+
+# --- Qualité -----------------------------------------------------------------
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+# Les migrations sont générées par Django : les reformater créerait des diffs
+# permanents sans valeur.
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort — ordre des imports
+    "UP",       # pyupgrade
+    "B",        # bugbear — pièges courants
+    "S",        # bandit — motifs dangereux
+    "DJ",       # règles Django
+    "RUF",
+]
+ignore = [
+    "RUF012",  # Django exige des attributs de classe mutables (fieldsets, fields…)
+]
+
+[tool.ruff.lint.isort]
+# Les modules de NetBox (netbox, utilities, tenancy, virtualization…) ne sont ni
+# des bibliothèques tierces ni notre code : ce sont ceux de l'application HÔTE.
+# Sans cette section dédiée, ruff les mélange à Django et l'on perd la lecture
+# « ce qui vient de l'extérieur / ce que NetBox fournit / ce qui est à nous ».
+section-order = ["future", "standard-library", "third-party", "netbox", "first-party", "local-folder"]
+
+[tool.ruff.lint.isort.sections]
+netbox = ["netbox", "utilities", "tenancy", "virtualization", "dcim", "ipam", "extras", "core"]
+
+[tool.ruff.lint.per-file-ignores]
+# assert est la forme normale d'un test : l'interdire n'aurait aucun sens ici.
+"tests/*" = ["S101"]
+
+# --- Sécurité ----------------------------------------------------------------
+[tool.bandit]
+exclude_dirs = ["tests", "netbox_applications/migrations"]

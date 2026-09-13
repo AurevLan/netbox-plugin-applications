@@ -1,0 +1,66 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load plugins %}
+
+{% block content %}
+<div class="row">
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Déploiement</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Application</th><td>{{ object.application|linkify }}</td></tr>
+        <tr><th scope="row">Environnement</th>
+            <td>{% badge object.get_environment_display bg_color=object.get_environment_color %}</td></tr>
+        <tr><th scope="row">Statut</th>
+            <td>{% badge object.get_status_display bg_color=object.get_status_color %}</td></tr>
+        <tr><th scope="row">URL d'accès</th>
+            <td>{% if object.url %}<a href="{{ object.url }}" target="_blank" rel="noopener">{{ object.url }}</a>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+        <tr><th scope="row">Description</th><td>{{ object.description|placeholder }}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Exploitation</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Plage de maintenance</th>
+            <td>{% badge object.get_maintenance_window_display bg_color=object.get_maintenance_window_color %}</td></tr>
+        <tr><th scope="row">Diffusé à l'externe</th><td>{% checkmark object.external_facing %}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Hérité de l'application
+        <small class="text-muted">— non modifiable ici</small></h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Criticité métier</th>
+            <td>{% badge object.application.get_criticality_display bg_color=object.application.get_criticality_color %}</td></tr>
+        <tr><th scope="row">Classification</th>
+            <td>{% badge object.application.get_data_classification_display bg_color=object.application.get_data_classification_color %}</td></tr>
+        <tr><th scope="row">Référent technique</th>
+            <td>{{ object.application.technical_contact|linkify|placeholder }}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">VM
+        <span class="badge text-bg-secondary">{{ object.virtual_machines.count }}</span></h2>
+      {% if object.virtual_machines.exists %}
+        <table class="table table-hover attr-table">
+          {% for vm in object.virtual_machines.all %}
+            <tr><td>{{ vm|linkify }}</td><td>{{ vm.status|placeholder }}</td>
+                <td>{{ vm.primary_ip|linkify|placeholder }}</td></tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class="card-body text-muted">Aucune VM rattachée.</div>
+      {% endif %}
+    </div>
+
+    {% include 'inc/panels/tags.html' %}
+    {% include 'inc/panels/custom_fields.html' %}
+    {% include 'inc/panels/comments.html' %}
+  </div>
+</div>
+{% endblock %}

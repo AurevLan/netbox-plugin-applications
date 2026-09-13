@@ -1,0 +1,93 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load plugins %}
+
+{% block content %}
+<div class="row">
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Identité</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Identifiant</th>
+            <td><span class="font-monospace">{{ object.application_id }}</span></td></tr>
+        <tr><th scope="row">Nom de l'application</th><td>{{ object.name }}</td></tr>
+        <tr><th scope="row">Client</th><td>{{ object.client|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Description</th><td>{{ object.description|placeholder }}</td></tr>
+        <tr><th scope="row">Documentation</th>
+            <td>{% if object.documentation_url %}<a href="{{ object.documentation_url }}" target="_blank" rel="noopener">{{ object.documentation_url }}</a>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Cycle de vie</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Statut du service</th>
+            <td>{% badge object.get_lifecycle_status_display bg_color=object.get_lifecycle_status_color %}</td></tr>
+        <tr><th scope="row">Criticité métier</th>
+            <td>{% badge object.get_criticality_display bg_color=object.get_criticality_color %}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Référents</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Référent technique</th>
+            <td>{{ object.technical_contact|linkify|placeholder }}
+              {% if object.technical_contact.email %}<br><small class="text-muted">{{ object.technical_contact.email }}</small>{% endif %}</td></tr>
+        <tr><th scope="row">Référent chef de projet</th>
+            <td>{{ object.project_manager|linkify|placeholder }}
+              {% if object.project_manager.email %}<br><small class="text-muted">{{ object.project_manager.email }}</small>{% endif %}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Continuité de service</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">RTO <small class="text-muted">interruption admise</small></th>
+            <td>{% if object.rto %}{% badge object.get_rto_display bg_color=object.get_rto_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+        <tr><th scope="row">RPO <small class="text-muted">perte de données admise</small></th>
+            <td>{% if object.rpo %}{% badge object.get_rpo_display bg_color=object.get_rpo_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+        <tr><th scope="row">Horaires de service</th>
+            <td>{% if object.service_hours %}{% badge object.get_service_hours_display bg_color=object.get_service_hours_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Sécurité et conformité</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Classification des données</th>
+            <td>{% badge object.get_data_classification_display bg_color=object.get_data_classification_color %}</td></tr>
+        <tr><th scope="row">Données personnelles (RGPD)</th>
+            <td>{% checkmark object.personal_data %}</td></tr>
+        <tr><th scope="row">Authentification</th>
+            <td>{% if object.authentication %}{% badge object.get_authentication_display bg_color=object.get_authentication_color %}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Déploiements
+        <span class="badge text-bg-secondary">{{ object.deployments.count }}</span></h2>
+      {% if object.deployments.exists %}
+        <table class="table table-hover attr-table">
+          {% for d in object.deployments.all %}
+            <tr>
+              <td>{% badge d.get_environment_display bg_color=d.get_environment_color %}</td>
+              <td>{{ d|linkify:"get_environment_display" }}</td>
+              <td>{% badge d.get_status_display bg_color=d.get_status_color %}</td>
+              <td>{{ d.virtual_machines.count }} VM</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class="card-body text-muted">Aucun déploiement. Une application sans déploiement n'existe que sur le papier.</div>
+      {% endif %}
+    </div>
+
+    {% include 'inc/panels/tags.html' %}
+    {% include 'inc/panels/custom_fields.html' %}
+    {% include 'inc/panels/comments.html' %}
+  </div>
+</div>
+{% endblock %}
