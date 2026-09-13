@@ -3,6 +3,28 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.4.3] — 2026-09-14
+
+### Corrigé
+
+- **Les couleurs des référentiels étaient invalides.** La migration 0004 écrivait des *noms*
+  (« red », « blue ») dans un `ColorField`, qui n'accepte que six caractères hexadécimaux. Une
+  migration de données n'appelle pas `full_clean()` : rien n'a protesté, et les badges
+  s'affichaient sans couleur. La source est corrigée, et `0006_couleurs` répare les bases
+  existantes.
+
+### Ajouté
+
+- **Une palette qui porte du sens**, appliquée aux dix référentiels :
+  - la **chaleur** indique l'exigence ou le risque — rouge sombre pour un RTO de 15 minutes, une
+    donnée restreinte ou l'absence de fenêtre de maintenance ; vert pour une exigence faible ;
+  - le **gris** est réservé à l'absence d'engagement : « au mieux », « à définir », « retiré » ;
+  - les **teintes froides** désignent les authentifications centralisées, les chaudes celles qui
+    ne le sont pas — la couleur redit ce que dit l'attribut `is_centralized`.
+- La migration **n'écrase jamais un choix de l'exploitant** : elle ne touche qu'aux couleurs
+  invalides ou restées au gris par défaut.
+- **La CI vérifie que toutes les couleurs sont valides.** C'est le contrôle qui manquait.
+
 ## [0.4.2] — 2026-09-14
 
 ### Corrigé — les référentiels étaient inutilisables

@@ -101,6 +101,34 @@ jobs:
             netbox-plugin-test \
             /opt/netbox/netbox/manage.py migrate
 
+      # Un ColorField n'accepte que six caractères hexadécimaux. Une migration
+      # de données n'appelle pas full_clean() : écrire « red » y passait sans
+      # erreur et produisait un badge sans couleur. Seul ce contrôle le voit.
+      - name: Vérifier que toutes les couleurs sont valides
+        run: |
+          docker run --rm --network host \
+            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
+            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
+            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
+            netbox-plugin-test \
+            /opt/netbox/netbox/manage.py shell -c "
+          import re
+          from netbox_applications.models import REFERENCES
+
+          HEXA = re.compile(r'^[0-9a-f]{6}\$')
+          echecs, n = [], 0
+          for modele in REFERENCES:
+              for objet in modele.objects.all():
+                  n += 1
+                  if not HEXA.match(objet.color or ''):
+                      echecs.append(f'{modele.__name__} / {objet.slug} : {objet.color!r}')
+          if not n:
+              raise SystemExit('ECHEC : aucune valeur de référentiel, la migration n a rien créé.')
+          if echecs:
+              raise SystemExit('ECHEC — couleurs invalides\n' + '\n'.join(echecs))
+          print(f'{n} valeurs, toutes avec une couleur valide.')
+          "
+
       # C'EST LE CONTRÔLE QUI COMPTE. Rendre un gabarit isolément ne prouve
       # rien : la version 0.4.0 avait dix pages en erreur 500 alors que ses
       # gabarits se rendaient. On parcourt donc TOUTES les pages du plugin
