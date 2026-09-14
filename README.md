@@ -37,7 +37,7 @@ interrompt la production en croyant toucher la recette.
 |---|---|
 | Identifiant | `APP-0001`, **attribué automatiquement**, non modifiable |
 | Client | un `tenancy.Tenant`, à son sens natif |
-| Cycle de vie | En projet · En service · En retrait · Retiré |
+| **Cycle de vie du service** | l'organisation rend-elle encore ce service ? |
 | Criticité métier | Critique · Majeure · Standard · Mineure |
 | **RTO** | durée maximale d'interruption admise |
 | **RPO** | perte de données admise — *conditionne la fréquence des sauvegardes* |
@@ -47,17 +47,21 @@ interrompt la production en croyant toucher la recette.
 | **Authentification** | Keycloak · OIDC · SAML · LDAP · AD · **Locale** · Aucune |
 | Référents | technique et chef de projet, des `tenancy.Contact` |
 
+Toutes les valeurs de ces listes s'ajoutent **dans l'interface** — voir
+[Les référentiels](#les-référentiels).
+
 **Déploiement** — ce qui dépend de l'environnement :
 
 | | |
 |---|---|
-| Environnement, statut | unicité garantie : **une seule fiche par environnement** |
+| Environnement | unicité garantie : **une seule fiche par environnement** |
+| **État de l'instance** | cette instance-là tourne-t-elle ? — *à ne pas confondre avec le cycle de vie du service* |
 | Plage de maintenance | quand une interruption est admise **ici** |
 | Diffusé à l'externe | propre à cet environnement |
 | **URL d'accès** | **propre à cet environnement** — la recette n'a pas l'URL de la production |
 | VM | les machines qui portent cette instance |
 
-### Deux règles impossibles à enfreindre
+### Trois règles impossibles à enfreindre
 
 Le modèle ne se contente pas de déconseiller — il **refuse** :
 
@@ -67,14 +71,24 @@ Le modèle ne se contente pas de déconseiller — il **refuse** :
    les deux issues : abaisser la classification, ou retirer l'exposition. Ce n'est pas une
    interdiction de principe — c'est la combinaison qu'on ne veut pas voir apparaître par
    inadvertance.
+3. **Retirer un service dont une instance de production tourne encore.** La règle vaut **dans
+   les deux sens** : ni en retirant le service, ni en démarrant l'instance. Hors production,
+   aucune contrainte — une recette peut survivre au retrait, le temps d'une réversibilité.
 
-### Trois distinctions qui évitent des erreurs
+Ces trois règles sont **éprouvées à chaque poussée** par l'intégration continue, avec des cas
+qui doivent être refusés *et* des cas qui doivent être acceptés : un contrôle trop large est
+aussi faux qu'un contrôle absent.
+
+### Quatre distinctions qui évitent des erreurs
 
 - **Horaires de service ≠ plage de maintenance.** Les premiers disent quand on doit *répondre*,
   la seconde quand on peut *interrompre*. Les confondre conduit à planifier une interruption au
   pire moment.
 - **RPO ≠ fréquence de sauvegarde souhaitée.** Le RPO est un **engagement** : un RPO d'une heure
   *interdit* une sauvegarde quotidienne.
+- **Cycle de vie du service ≠ état d'instance.** Le premier dit si l'organisation rend encore
+  le service, le second si *cette instance-là* tourne. Un service en exploitation peut avoir une
+  instance de développement encore planifiée.
 - **Authentification « Locale » n'est pas un détail.** Elle signale des comptes **échappant à la
   révocation centralisée**. Le jour où quelqu'un quitte l'organisation, c'est cette liste qu'on
   ouvre.
@@ -108,7 +122,7 @@ Trois fichiers à créer dans votre copie de `netbox-docker`, puis une commande.
 ARG NETBOX_IMAGE_TAG=v4.7-5.1.1
 FROM netboxcommunity/netbox:${NETBOX_IMAGE_TAG}
 
-ARG PLUGIN_VERSION=v0.1.0
+ARG PLUGIN_VERSION=v0.5.1
 
 USER root
 
@@ -148,7 +162,7 @@ x-netbox-plugins: &netbox-plugins
     dockerfile: Dockerfile-plugins
     args:
       NETBOX_IMAGE_TAG: "v4.7-5.1.1"
-      PLUGIN_VERSION: "v0.1.0"
+      PLUGIN_VERSION: "v0.5.1"
   image: netbox-with-plugins:latest
 
 services:
@@ -195,6 +209,7 @@ l'interface.
 | `relation "netbox_applications_..." does not exist` | l'image a été construite sans le plugin, ou le conteneur tourne sur une image antérieure — reconstruire puis `up -d` |
 | Les tâches en arrière-plan échouent | `netbox-worker` n'utilise pas la même image que `netbox` |
 | Démarrage déclaré `unhealthy` | `start_period` trop court sur une machine lente |
+| Le plugin **recule de version** sans erreur | une valeur de repli sur `PLUGIN_VERSION` (`${PLUGIN_VERSION:-v0.1.0}`) : la variable manquante fait construire une version ancienne, sous le nom d'image attendu. Préférer `${PLUGIN_VERSION:?}`, qui **arrête** la commande |
 
 ### Installation classique (NetBox installé directement sur un serveur)
 
@@ -203,7 +218,7 @@ l'interface.
 ```bash
 # 1. Installer dans l'environnement virtuel de NetBox — pas celui du système
 source /opt/netbox/venv/bin/activate
-pip install "netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.1.0"
+pip install "netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.5.1"
 ```
 
 ```python
@@ -224,7 +239,7 @@ sudo systemctl restart netbox netbox-rq
 # 5. Survivre aux mises à jour de NetBox
 #    upgrade.sh recrée l'environnement virtuel : sans cette ligne, le plugin
 #    disparaîtrait silencieusement à la prochaine montée de version.
-echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.1.0' \
+echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.5.1' \
   >> /opt/netbox/local_requirements.txt
 ```
 
@@ -239,24 +254,36 @@ echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin
 
 ### Interface
 
-Menu **Applications**, avec deux entrées. La fiche d'une application porte un onglet
-**Déploiements** dont le badge affiche leur nombre.
+Menu **Applications**, en deux groupes :
+
+- **Catalogue** — *Applications* et *Déploiements*, ce qu'on consulte tous les jours.
+- **Référentiels** — les dix listes de valeurs, qu'on modifie rarement.
+
+La fiche d'une application porte un onglet **Déploiements** dont le badge affiche leur nombre.
 
 ### API
 
 ```
 /api/plugins/applications/applications/
 /api/plugins/applications/deployments/
+/api/plugins/applications/authenticationmethod/     ← et les neuf autres référentiels
+```
+
+**Les champs de référentiel attendent un identifiant numérique**, comme toute relation NetBox.
+On le récupère par son `slug` :
+
+```bash
+AUTH=$(curl -s -H "Authorization: Bearer $TOKEN" \
+  "$NETBOX_URL/api/plugins/applications/authenticationmethod/?slug=keycloak" \
+  | jq -r '.results[0].id')
 ```
 
 Créer une application — **sans fournir d'identifiant**, il est attribué :
 
 ```bash
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"name":"Portail RH","client":2,"lifecycle_status":"en-service",
-       "criticality":"critique","rto":"4h","rpo":"1h",
-       "data_classification":"confidentiel","personal_data":true,
-       "authentication":"keycloak"}' \
+  -d "{\"name\":\"Portail RH\",\"client\":2,\"authentication\":$AUTH,
+       \"personal_data\":true}" \
   "$NETBOX_URL/api/plugins/applications/applications/"
 ```
 
@@ -264,9 +291,8 @@ Puis un déploiement par environnement :
 
 ```bash
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"application":1,"environment":"production","status":"actif",
-       "maintenance_window":"aucune-24-7","external_facing":true,
-       "access_url":"https://rh.example.com"}' \
+  -d "{\"application\":1,\"environment\":$ENV_PROD,\"status\":$ETAT_ACTIF,
+       \"external_facing\":true,\"access_url\":\"https://rh.example.com\"}" \
   "$NETBOX_URL/api/plugins/applications/deployments/"
 ```
 
@@ -274,48 +300,65 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 > qui pointe vers l'objet lui-même. L'adresse d'accès de l'application porte donc un nom
 > distinct.
 
-### Ajouter un choix sans modifier le code
+### Les référentiels
 
-Toutes les listes déroulantes sont **extensibles par configuration**. Dans la configuration de
-NetBox (`configuration/extra.py` avec `netbox-docker`) :
+**Les dix listes de valeurs sont des objets NetBox à part entière.** Ajouter « CAS » ne demande
+ni fichier à éditer, ni redémarrage, ni migration :
 
-```python
-FIELD_CHOICES = {
-    # AJOUTER aux choix existants — noter le « + » final
-    "netbox_applications.Application.authentication+": [
-        ("cas", "CAS", "cyan"),
-        ("kerberos", "Kerberos", "purple"),
-    ],
-
-    # REMPLACER entièrement la liste — sans le « + »
-    "netbox_applications.Deployment.maintenance_window": [
-        ("mardi-soir", "Mardi soir 20h-22h", "blue"),
-        ("aucune", "Aucune", "red"),
-    ],
-}
+```
+Applications → Référentiels → Authentification → « Ajouter »
 ```
 
-Un **redémarrage suffit** : aucune migration n'est nécessaire, les choix ne sont pas contraints
-en base. Le troisième élément de chaque tuple est la couleur du badge.
+Un nom, une couleur, une description. La valeur est immédiatement proposée dans les formulaires.
 
-#### Clés disponibles
-
-| Clé | Champ |
+| Référentiel | Ce qu'il alimente |
 |---|---|
-| `netbox_applications.Application.lifecycle_status` | Statut du service |
-| `netbox_applications.Application.criticality` | Criticité métier |
-| `netbox_applications.Application.rto` | RTO |
-| `netbox_applications.Application.rpo` | RPO |
-| `netbox_applications.Application.service_hours` | Horaires de service |
-| `netbox_applications.Application.data_classification` | Classification |
-| `netbox_applications.Application.authentication` | Authentification |
-| `netbox_applications.Deployment.environment` | Environnement |
-| `netbox_applications.Deployment.maintenance_window` | Plage de maintenance |
-| `netbox_applications.Deployment.status` | Statut du déploiement |
+| Cycle de vie du service | Application → Cycle de vie |
+| Criticités | Application → Criticité |
+| RTO / RPO | Application → engagements de continuité |
+| Horaires de service | Application → Horaires |
+| Classifications | Application → Classification |
+| Authentification | Application → Authentification |
+| Environnements | Déploiement → Environnement |
+| États d'instance | Déploiement → État |
+| Plages de maintenance | Déploiement → Maintenance |
 
-> **Attention en cas de remplacement** : retirer une valeur déjà employée par des fiches
-> existantes ne les modifie pas — elles conservent la valeur en base, mais le libellé et la
-> couleur disparaissent. Préférez le `+` sauf à vouloir réellement repartir d'une liste propre.
+**Supprimer une valeur employée est refusé.** Les clés étrangères sont en `PROTECT` : effacer
+« Critique » ne doit pas vider silencieusement le champ de toutes les applications concernées.
+
+#### Chaque référentiel porte plus qu'un libellé
+
+C'est le point qui dépasse le confort. **Un attribut bien choisi transforme une convention
+tacite en donnée interrogeable.**
+
+| Référentiel | Attribut | Ce qu'il permet |
+|---|---|---|
+| Authentification | `is_centralized` | « quelles applications ont des comptes échappant à la révocation ? » — **sans supposer que la valeur s'appelle "locale"** |
+| RTO / RPO | `minutes` | comparer et trier ; « RPO inférieur à 2 heures » devient une requête |
+| Criticité | `incident_priority`, `requires_oncall` | relier la fiche au traitement des incidents |
+| Classification | `level`, `requires_encryption` | « au moins confidentiel » devient une requête |
+| Environnement | `is_production` | des règles plus strictes, sans liste de noms à maintenir |
+| Cycle de vie | `is_operational` | « le service est-il rendu ? », quel que soit le libellé |
+
+Renommer « Locale » en « Comptes applicatifs » ne casse aucune requête : les filtres portent sur
+l'attribut, jamais sur le nom.
+
+#### La couleur porte un sens
+
+| Règle | Application |
+|---|---|
+| La **chaleur** indique l'exigence ou le risque | rouge sombre = contrainte la plus forte (RTO de 15 minutes, donnée restreinte) ; vert = exigence faible |
+| Le **gris** est réservé à l'absence d'engagement | « au mieux », « à définir », « retiré » |
+| **Froid = centralisé**, chaud = ne l'est pas | la couleur redit ce que dit `is_centralized` |
+
+Les listes affichent ces badges, pas seulement les fiches : c'est sur plusieurs dizaines de
+lignes qu'une palette paie.
+
+> **Avant la version 0.4.0**, ces listes étaient des `ChoiceSet` étendus par `FIELD_CHOICES`
+> dans la configuration de NetBox, suivis d'un redémarrage. **Cette procédure n'a plus aucun
+> effet.** La migration vers les référentiels reprend les valeurs *employées par une fiche* ;
+> celles déclarées dans `FIELD_CHOICES` sans être utilisées doivent être recréées dans
+> l'interface.
 
 ### Filtrer dans l'interface
 
@@ -323,9 +366,9 @@ La liste des applications propose un panneau de filtres **regroupé par section*
 
 | Section | Filtres |
 |---|---|
-| Cycle de vie | statut du service, criticité |
+| Cycle de vie | cycle de vie du service, **service rendu**, criticité |
 | Continuité | RTO, RPO, horaires de service |
-| **Sécurité** | classification, données personnelles, **authentification** |
+| **Sécurité** | classification, données personnelles, authentification, **authentification centralisée** |
 | Rattachements | client, référent technique, référent chef de projet |
 | Déploiements | **environnement** — traverse la relation |
 
@@ -334,12 +377,27 @@ sur les déploiements, pas sur l'application elle-même.
 
 ### Filtres utiles
 
+> ⚠️ **Un filtre inconnu est ignoré, pas refusé.** NetBox renvoie alors **toute** la collection,
+> avec un `HTTP 200`. Un nom de paramètre erroné ne produit donc pas une erreur mais une réponse
+> fausse, ce qui est bien pire. Les noms ci-dessous sont ceux du plugin, vérifiés.
+
+Les filtres portant sur un **attribut** du référentiel sont les plus solides : ils survivent au
+renommage d'une valeur.
+
 | Question | Filtre |
 |---|---|
-| Quelles applications sont en production ? | `?environment=production` — traverse la relation |
-| Lesquelles ont une authentification locale ? | `?authentication=locale` |
+| Quelles applications ont des comptes hors révocation centralisée ? | `?authentication_centralized=false` |
+| Lesquelles rendent réellement le service ? | `?operational=true` |
+| Quels déploiements sont en production ? | `/deployments/?production=true` |
+
+Les filtres par valeur attendent un **identifiant**, pas un slug :
+
+| Question | Filtre |
+|---|---|
+| Quelles applications utilisent telle authentification ? | `?authentication_id=<id>` |
+| Lesquelles ont un déploiement dans cet environnement ? | `?environment_id=<id>` |
 | Lesquelles traitent des données personnelles ? | `?personal_data=true` |
-| Quels déploiements sont exposés ? | `/deployments/?external_facing=true` |
+| Quels déploiements sont exposés à l'externe ? | `/deployments/?external_facing=true` |
 
 ---
 
@@ -364,6 +422,22 @@ detect-secrets scan      # secrets accidentellement commités
 
 Tous sont exécutés à chaque commit par `pre-commit`, et à chaque poussée par l'intégration
 continue.
+
+**L'intégration continue va plus loin que le lint**, parce que le lint n'a jamais rien vu des
+défauts réels de ce plugin. À chaque poussée, dans un NetBox réel avec sa base :
+
+| Contrôle | Ce qu'il attrape |
+|---|---|
+| Les migrations s'appliquent | un modèle et une migration qui divergent |
+| Toutes les couleurs sont hexadécimales | une migration de données n'appelle pas `full_clean()` : elle écrit sans valider |
+| **Les trois règles sont éprouvées** | cinq cas, dont **deux qui doivent être acceptés** — un garde-fou trop large est aussi faux qu'un garde-fou absent |
+| **Les 48 pages sont parcourues** | une vue en erreur 500, ou du texte de gabarit fuitant dans le HTML |
+
+> Le dernier point n'est pas du zèle. Rendre un gabarit isolément ne prouve rien : une version a
+> livré dix pages en erreur 500 alors que ses gabarits se rendaient parfaitement. **Un contrôle
+> doit emprunter le chemin de l'utilisateur.**
+
+**Il n'y a pas encore de tests unitaires** — c'est le manque le plus net du projet.
 
 ### Modifier le modèle
 

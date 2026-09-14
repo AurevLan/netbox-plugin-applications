@@ -3,6 +3,34 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Corrigé — la documentation décrivait un plugin qui n'existe plus
+
+Le README public décrivait encore le fonctionnement d'avant la 0.4.0. Aucun changement de code :
+c'est la documentation qui était fausse, et le dépôt est public.
+
+- **La procédure d'ajout d'un choix** (`FIELD_CHOICES` + redémarrage) **n'a plus aucun effet**
+  depuis la 0.4.0. Remplacée par la section *Les référentiels*, et l'ancienne procédure signalée
+  comme caduque pour qui lit des fiches antérieures.
+- **Les exemples d'API échouaient en HTTP 400** : les champs de référentiel attendent un
+  identifiant numérique. Les exemples montrent maintenant comment l'obtenir depuis un `slug`.
+- **Les exemples de filtres renvoyaient une réponse silencieusement fausse.**
+  `?authentication=locale` se comportait exactement comme un paramètre inventé — NetBox ignore
+  les filtres inconnus et retourne **toute** la collection avec un `HTTP 200`. Sur une question
+  de sécurité, la réponse fausse est pire que l'erreur. Les noms réels sont documentés, et le
+  piège est signalé.
+- Le menu **Référentiels**, apport principal des trois dernières versions, n'était pas mentionné.
+- « Deux règles impossibles à enfreindre » : il y en a **trois** depuis la 0.5.0.
+- Les exemples d'installation épinglaient encore `v0.1.0`.
+- Ajout du piège rencontré en exploitation : une valeur de repli sur `PLUGIN_VERSION` fait
+  reculer le plugin de version **sans erreur**, sous le nom d'image attendu.
+- La section *Contrôles* décrit ce que la CI vérifie réellement, et dit **qu'il n'y a pas encore
+  de tests unitaires**.
+
+Toutes les commandes et tous les filtres de cette version du README ont été **exécutés** avant
+d'être écrits.
+
 ## [0.5.1] — 2026-09-14
 
 ### Ajouté
