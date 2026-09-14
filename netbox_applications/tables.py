@@ -116,7 +116,7 @@ class DataClassificationTable(ReferenceTable):
 
 
 class LifecycleStatusTable(ReferenceTable):
-    is_operational = columns.BooleanColumn(verbose_name="En service")
+    is_operational = columns.BooleanColumn(verbose_name="Service rendu")
 
     class Meta(ReferenceTable.Meta):
         model = LifecycleStatus
@@ -134,7 +134,7 @@ class EnvironmentTable(ReferenceTable):
 
 
 class DeploymentStatusTable(ReferenceTable):
-    is_active = columns.BooleanColumn(verbose_name="Actif")
+    is_active = columns.BooleanColumn(verbose_name="En fonctionnement")
 
     class Meta(ReferenceTable.Meta):
         model = DeploymentStatus
@@ -153,7 +153,7 @@ class ApplicationTable(NetBoxTable):
     # leur fiche, ce qu'une valeur de liste ne permettait pas. Elle porte en
     # outre la COULEUR de la valeur — c'est dans une liste de plusieurs
     # dizaines de lignes que la palette paie : le regard trie sans lire.
-    lifecycle_status = columns.ColoredLabelColumn(verbose_name="Statut")
+    lifecycle_status = columns.ColoredLabelColumn(verbose_name="Cycle de vie")
     criticality = columns.ColoredLabelColumn(verbose_name="Criticité")
     data_classification = columns.ColoredLabelColumn(verbose_name="Classification")
     authentication = columns.ColoredLabelColumn(verbose_name="Authentification")
@@ -209,7 +209,7 @@ class ApplicationTable(NetBoxTable):
 class DeploymentTable(NetBoxTable):
     application = tables.Column(linkify=True, verbose_name="Application")
     environment = columns.ColoredLabelColumn(verbose_name="Environnement")
-    status = columns.ColoredLabelColumn(verbose_name="Statut")
+    status = columns.ColoredLabelColumn(verbose_name="État")
     maintenance_window = columns.ColoredLabelColumn(verbose_name="Maintenance")
     external_facing = columns.BooleanColumn(verbose_name="Externe")
     access_url = tables.URLColumn(verbose_name="URL d'accès")

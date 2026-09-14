@@ -21,7 +21,7 @@
     <div class="card">
       <h2 class="card-header">Cycle de vie</h2>
       <table class="table table-hover attr-table">
-        <tr><th scope="row">Statut du service</th>
+        <tr><th scope="row">Cycle de vie du service</th>
             <td>{% include "netbox_applications/inc/reference.html" with ref=object.lifecycle_status %}</td></tr>
         <tr><th scope="row">Criticité métier</th>
             <td>{% include "netbox_applications/inc/reference.html" with ref=object.criticality %}</td></tr>
@@ -73,7 +73,7 @@
         <table class="table table-hover">
           <thead>
             <tr>
-              <th>Environnement</th><th>Statut</th><th>URL d'accès</th>
+              <th>Environnement</th><th>État</th><th>URL d'accès</th>
               <th>Maintenance</th><th>Externe</th><th>VM</th>
             </tr>
           </thead>

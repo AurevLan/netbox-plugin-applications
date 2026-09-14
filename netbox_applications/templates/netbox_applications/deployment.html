@@ -11,7 +11,7 @@
         <tr><th scope="row">Application</th><td>{{ object.application|linkify }}</td></tr>
         <tr><th scope="row">Environnement</th>
             <td>{% include "netbox_applications/inc/reference.html" with ref=object.environment %}</td></tr>
-        <tr><th scope="row">Statut</th>
+        <tr><th scope="row">État de l'instance</th>
             <td>{% include "netbox_applications/inc/reference.html" with ref=object.status %}</td></tr>
         <tr><th scope="row">URL d'accès</th>
             <td>{% if object.access_url %}<a href="{{ object.access_url }}" target="_blank" rel="noopener">{{ object.access_url }}</a>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>

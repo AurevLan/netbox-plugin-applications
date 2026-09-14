@@ -7,7 +7,7 @@ class ApplicationsConfig(PluginConfig):
     name = "netbox_applications"
     verbose_name = "Applications"
     description = "Fiche applicative au sens CMDB : client, environnement, maintenance, référents, VM."
-    version = "0.4.4"
+    version = "0.5.0"
     author = "Aurelien"
     base_url = "applications"
     # Contrainte de version : si une montée de NetBox casse l'API plugin, le

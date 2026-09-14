@@ -3,6 +3,38 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.5.0] — 2026-09-14
+
+### Changé — les deux niveaux ne se confondent plus
+
+« Statut de service » et « statut de déploiement » se répondaient terme à terme — *En service* /
+*Actif*, *Retiré* / *Hors ligne* — au point de passer pour un doublon. Le doublon était dans le
+**vocabulaire**, pas dans le sens : le premier dit si l'organisation rend encore le service, le
+second si **cette instance-là** tourne. Un service en exploitation peut avoir une instance de
+développement encore planifiée.
+
+- **Le niveau est désormais explicite** : *Cycle de vie du service* sur l'application, *État de
+  l'instance* sur le déploiement. Menu, colonnes, filtres et fiches suivent.
+- Les valeurs d'état d'instance ne se confondent plus avec les étapes du cycle de vie :
+  *Actif* → **En exploitation**, *Hors ligne* → **Arrêté**.
+- Les attributs se lisent au bon niveau : *Service rendu* et *En fonctionnement*.
+- La migration **ne renomme pas une valeur que l'exploitant a modifiée lui-même**.
+
+### Ajouté — la contradiction devient impossible
+
+- **Un service qui n'est plus rendu ne peut plus garder une instance de production en
+  fonctionnement.** Le contrôle vaut **dans les deux sens** : ni en retirant le service, ni en
+  démarrant l'instance. Sans la réciproque, le garde-fou se contournerait par l'autre bout.
+- Il se fonde sur les **attributs** — `is_operational`, `is_active`, `is_production` — jamais sur
+  les noms : renommer une valeur ne le désarme pas.
+- Hors production, aucune contrainte : une recette peut tourner après le retrait du service.
+
+### Corrigé
+
+- **Le garde-fou d'exposition externe ne protégeait plus rien.** Il comparait la classification à
+  la chaîne `"restreint"` ; depuis la 0.4.0 c'est un objet, donc la comparaison était toujours
+  fausse. Il s'appuie maintenant sur le **niveau** (`level >= 3`), ce qui survit à un renommage.
+
 ## [0.4.4] — 2026-09-14
 
 ### Ajouté

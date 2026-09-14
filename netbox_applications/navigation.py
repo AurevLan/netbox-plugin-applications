@@ -36,7 +36,7 @@ catalogue = (
 # Les libellés sont explicites : « RTO » seul ne dirait rien à qui ouvre le
 # menu sans connaître l'acronyme.
 referentiels = (
-    _item("LifecycleStatus", "Statuts de service", "Ajouter un statut"),
+    _item("LifecycleStatus", "Cycle de vie du service", "Ajouter une étape"),
     _item("Criticality", "Criticités", "Ajouter une criticité"),
     _item("RTO", "RTO — reprise", "Ajouter un RTO"),
     _item("RPO", "RPO — perte de données", "Ajouter un RPO"),
@@ -44,7 +44,7 @@ referentiels = (
     _item("DataClassification", "Classifications", "Ajouter une classification"),
     _item("AuthenticationMethod", "Authentification", "Ajouter une méthode"),
     _item("Environment", "Environnements", "Ajouter un environnement"),
-    _item("DeploymentStatus", "Statuts de déploiement", "Ajouter un statut"),
+    _item("DeploymentStatus", "États d'instance", "Ajouter un état"),
     _item("MaintenanceWindow", "Plages de maintenance", "Ajouter une plage"),
 )
 

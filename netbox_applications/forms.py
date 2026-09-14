@@ -147,7 +147,7 @@ class ApplicationForm(NetBoxModelForm):
         help_text="Le client est un « Tenant » NetBox — sens natif de cet objet.",
     )
     lifecycle_status = DynamicModelChoiceField(
-        queryset=LifecycleStatus.objects.all(), required=False, label="Statut du service"
+        queryset=LifecycleStatus.objects.all(), required=False, label="Cycle de vie du service"
     )
     criticality = DynamicModelChoiceField(
         queryset=Criticality.objects.all(), required=False, label="Criticité métier"
@@ -227,7 +227,7 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
     )
 
     lifecycle_status_id = DynamicModelMultipleChoiceField(
-        queryset=LifecycleStatus.objects.all(), required=False, label="Statut du service"
+        queryset=LifecycleStatus.objects.all(), required=False, label="Cycle de vie du service"
     )
     criticality_id = DynamicModelMultipleChoiceField(
         queryset=Criticality.objects.all(), required=False, label="Criticité"
@@ -247,7 +247,7 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
     # Filtres portant sur un ATTRIBUT du référentiel, pas sur son nom : ils
     # survivent au renommage d'une valeur. Sans entrée dans un « fieldset »,
     # ils n'existeraient que pour l'API.
-    operational = forms.NullBooleanField(required=False, label="Réellement en service")
+    operational = forms.NullBooleanField(required=False, label="Service rendu")
     authentication_centralized = forms.NullBooleanField(required=False, label="Authentification centralisée")
     client_id = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), required=False, label="Client")
     technical_contact_id = DynamicModelMultipleChoiceField(
@@ -265,7 +265,9 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
 class DeploymentForm(NetBoxModelForm):
     application = DynamicModelChoiceField(queryset=Application.objects.all(), label="Application")
     environment = DynamicModelChoiceField(queryset=Environment.objects.all(), label="Environnement")
-    status = DynamicModelChoiceField(queryset=DeploymentStatus.objects.all(), required=False, label="Statut")
+    status = DynamicModelChoiceField(
+        queryset=DeploymentStatus.objects.all(), required=False, label="État de l'instance"
+    )
     maintenance_window = DynamicModelChoiceField(
         queryset=MaintenanceWindow.objects.all(), required=False, label="Plage de maintenance"
     )
@@ -314,7 +316,7 @@ class DeploymentFilterForm(NetBoxModelFilterSetForm):
     # Porte sur l'attribut « is_production » de l'environnement, pas sur son nom.
     production = forms.NullBooleanField(required=False, label="En production")
     status_id = DynamicModelMultipleChoiceField(
-        queryset=DeploymentStatus.objects.all(), required=False, label="Statut"
+        queryset=DeploymentStatus.objects.all(), required=False, label="État de l'instance"
     )
     maintenance_window_id = DynamicModelMultipleChoiceField(
         queryset=MaintenanceWindow.objects.all(), required=False, label="Maintenance"

@@ -19,6 +19,11 @@ from django.urls import reverse
 
 from netbox.models import NetBoxModel
 
+# Seuil au-delà duquel une donnée ne se diffuse pas librement. Exprimé en
+# niveau et non en nom : renommer « Restreint » ne doit pas désarmer le
+# garde-fou.
+NIVEAU_RESTREINT = 3
+
 
 class Application(NetBoxModel):
     """Fiche applicative — le service, indépendamment de ses déploiements."""
@@ -49,7 +54,7 @@ class Application(NetBoxModel):
         to="netbox_applications.LifecycleStatus",
         on_delete=models.PROTECT,
         related_name="applications",
-        verbose_name="Statut du service",
+        verbose_name="Cycle de vie du service",
         null=True,
         blank=True,
     )
@@ -149,6 +154,25 @@ class Application(NetBoxModel):
     def get_absolute_url(self):
         return reverse("plugins:netbox_applications:application", args=[self.pk])
 
+    def clean(self):
+        super().clean()
+        # Le contrôle vaut DANS LES DEUX SENS. Sans celui-ci, il suffirait de
+        # retirer le service pour créer la contradiction que l'autre refuse :
+        # le garde-fou se contournerait par l'autre bout.
+        if self.pk and self.lifecycle_status and not self.lifecycle_status.is_operational:
+            vivantes = self.deployments.filter(status__is_active=True, environment__is_production=True)
+            if vivantes.exists():
+                noms = ", ".join(str(d.environment) for d in vivantes)
+                raise ValidationError(
+                    {
+                        "lifecycle_status": (
+                            f"À l'étape « {self.lifecycle_status} », le service n'est pas "
+                            f"rendu, mais des instances de production sont encore en "
+                            f"fonctionnement ({noms}). Les arrêter d'abord."
+                        )
+                    }
+                )
+
     def save(self, *args, **kwargs):
         """Attribue l'identifiant lisible à la première sauvegarde.
 
@@ -181,7 +205,7 @@ class Deployment(NetBoxModel):
         to="netbox_applications.DeploymentStatus",
         on_delete=models.PROTECT,
         related_name="deployments",
-        verbose_name="Statut",
+        verbose_name="État de l'instance",
         null=True,
         blank=True,
     )
@@ -241,13 +265,39 @@ class Deployment(NetBoxModel):
         # n'est pas interdit, mais mérite d'être posé consciemment.
         if self.external_facing and self.application_id:
             classification = self.application.data_classification
-            if classification == "restreint":
+            # Comparaison sur le NIVEAU, pas sur le nom : depuis que la
+            # classification est un objet, « == "restreint" » était toujours
+            # faux et ce garde-fou ne protégeait plus rien.
+            if classification is not None and classification.level >= NIVEAU_RESTREINT:
                 raise ValidationError(
                     {
                         "external_facing": (
                             "L'application traite des données en diffusion restreinte. "
                             "Une exposition externe doit être validée : abaisser la "
                             "classification ou retirer l'exposition."
+                        )
+                    }
+                )
+
+        # Cohérence entre les DEUX niveaux. Un service que l'organisation
+        # déclare ne plus rendre ne peut pas garder une instance en
+        # fonctionnement en production : c'est exactement le genre de
+        # contradiction qui ne se voit qu'au moment de l'incident.
+        if self.application_id and self.status and self.environment_id:
+            etape = self.application.lifecycle_status
+            if (
+                self.status.is_active
+                and self.environment.is_production
+                and etape is not None
+                and not etape.is_operational
+            ):
+                raise ValidationError(
+                    {
+                        "status": (
+                            f"L'application est à l'étape « {etape} », où le service n'est "
+                            f"pas rendu, alors que cette instance de production serait en "
+                            f"fonctionnement. Faire avancer le cycle de vie de "
+                            f"l'application, ou arrêter cette instance."
                         )
                     }
                 )

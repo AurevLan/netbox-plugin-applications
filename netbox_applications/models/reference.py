@@ -239,20 +239,33 @@ class DataClassification(ReferenceModel):
 
 
 class LifecycleStatus(ReferenceModel):
-    """Étape du cycle de vie d'un service."""
+    """Étape du cycle de vie du SERVICE — pas d'une instance.
+
+    À ne pas confondre avec DeploymentStatus, qui décrit l'état d'UNE instance
+    dans un environnement. Les deux répondent à des questions différentes :
+
+      cycle de vie du service — « l'organisation offre-t-elle encore ce
+                                 service ? » C'est l'engagement vis-à-vis du
+                                 métier, au sens ITIL.
+      état d'instance         — « cette instance-là tourne-t-elle ? »
+
+    Un service en exploitation peut avoir une instance de développement encore
+    planifiée ; un service en projet peut déjà avoir une instance de recette en
+    fonctionnement. Un seul champ ne saurait dire les deux.
+    """
 
     # Répond à « quelles applications sont réellement en service ? » sans
     # supposer que l'étape s'appelle « en-service ».
     is_operational = models.BooleanField(
         default=False,
-        verbose_name="En service",
-        help_text="Cette étape correspond-elle à une application réellement en service ?",
+        verbose_name="Service rendu",
+        help_text="À cette étape, le service est-il rendu au métier ?",
     )
 
     class Meta(ReferenceModel.Meta):
         abstract = False
-        verbose_name = "statut de service"
-        verbose_name_plural = "statuts de service"
+        verbose_name = "étape du cycle de vie"
+        verbose_name_plural = "étapes du cycle de vie"
 
     def get_absolute_url(self):
         from django.urls import reverse
@@ -281,18 +294,18 @@ class Environment(ReferenceModel):
 
 
 class DeploymentStatus(ReferenceModel):
-    """Statut d'un déploiement."""
+    """État d'UNE instance — voir LifecycleStatus pour la distinction."""
 
     is_active = models.BooleanField(
         default=False,
-        verbose_name="Actif",
-        help_text="Ce statut correspond-il à un déploiement en fonctionnement ?",
+        verbose_name="En fonctionnement",
+        help_text="Cet état correspond-il à une instance qui tourne réellement ?",
     )
 
     class Meta(ReferenceModel.Meta):
         abstract = False
-        verbose_name = "statut de déploiement"
-        verbose_name_plural = "statuts de déploiement"
+        verbose_name = "état d'instance"
+        verbose_name_plural = "états d'instance"
 
     def get_absolute_url(self):
         from django.urls import reverse
