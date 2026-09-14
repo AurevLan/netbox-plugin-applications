@@ -162,12 +162,17 @@ jobs:
       #
       # « --fail-under » : une couverture qui baisse doit faire échouer la
       # construction, sinon elle baisse.
+      #
+      # COVERAGE_FILE dans /tmp : le répertoire de travail de l'image NetBox
+      # n'est pas inscriptible par l'utilisateur 999, et coverage échouait à y
+      # écrire son relevé — avant même d'avoir lancé le moindre test.
       - name: Tests et couverture
         run: |
           docker run --rm --network host \
             -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
             -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
             -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
+            -e COVERAGE_FILE=/tmp/.coverage \
             netbox-plugin-test sh -c '
               coverage run --source=netbox_applications --omit="*/migrations/*,*/tests/*" \
                 /opt/netbox/netbox/manage.py test netbox_applications --verbosity 2 &&
