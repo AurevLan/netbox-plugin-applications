@@ -129,6 +129,79 @@ jobs:
           print(f'{n} valeurs, toutes avec une couleur valide.')
           "
 
+      # Un garde-fou non éprouvé n'en est pas un : celui de l'exposition
+      # externe comparait un objet à une chaîne depuis la 0.4.0 et n'a rien
+      # refusé pendant deux versions, sans que rien ne le signale.
+      - name: Éprouver les garde-fous du modèle
+        run: |
+          docker run --rm --network host \
+            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
+            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
+            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
+            netbox-plugin-test \
+            /opt/netbox/netbox/manage.py shell -c "
+          from django.core.exceptions import ValidationError
+          from netbox_applications.models import (
+              Application, Deployment, DataClassification, DeploymentStatus,
+              Environment, LifecycleStatus,
+          )
+
+          retire = LifecycleStatus.objects.get(slug='retire')
+          en_service = LifecycleStatus.objects.get(slug='en-service')
+          actif = DeploymentStatus.objects.get(slug='actif')
+          prod = Environment.objects.get(slug='production')
+          recette = Environment.objects.get(slug='recette')
+
+          app = Application.objects.create(name='ci-app', lifecycle_status=en_service)
+          d_prod = Deployment.objects.create(application=app, environment=prod, status=actif)
+
+          echecs = []
+
+          def refuse(objet, cas, champ):
+              try:
+                  objet.full_clean()
+              except ValidationError as e:
+                  if champ not in e.message_dict:
+                      echecs.append(f'{cas} : refusé mais sur {list(e.message_dict)}')
+              else:
+                  echecs.append(f'{cas} : ACCEPTÉ alors qu il devait être refusé')
+
+          def accepte(objet, cas):
+              try:
+                  objet.full_clean()
+              except ValidationError as e:
+                  echecs.append(f'{cas} : refusé à tort ({e.message_dict})')
+
+          # Cohérence entre les deux niveaux, dans les deux sens.
+          app.lifecycle_status = retire
+          refuse(app, 'retirer le service avec une prod en fonctionnement', 'lifecycle_status')
+          Application.objects.filter(pk=app.pk).update(lifecycle_status=retire)
+          d_prod.refresh_from_db()
+          refuse(d_prod, 'prod en fonctionnement pour un service retiré', 'status')
+
+          # Hors production, aucune contrainte.
+          d_rec = Deployment.objects.create(application=app, environment=recette, status=actif)
+          accepte(d_rec, 'recette en fonctionnement pour un service retiré')
+
+          # Exposition externe d une donnée restreinte.
+          Application.objects.filter(pk=app.pk).update(
+              lifecycle_status=en_service,
+              data_classification=DataClassification.objects.get(slug='restreint'),
+          )
+          d_rec.refresh_from_db(); d_rec.external_facing = True
+          refuse(d_rec, 'exposition externe d une donnée restreinte', 'external_facing')
+
+          Application.objects.filter(pk=app.pk).update(
+              data_classification=DataClassification.objects.get(slug='interne'),
+          )
+          d_rec.refresh_from_db(); d_rec.external_facing = True
+          accepte(d_rec, 'exposition externe d une donnée interne')
+
+          if echecs:
+              raise SystemExit('ECHEC\n' + '\n'.join(echecs))
+          print('Garde-fous éprouvés : 5 cas, tous conformes.')
+          "
+
       # C'EST LE CONTRÔLE QUI COMPTE. Rendre un gabarit isolément ne prouve
       # rien : la version 0.4.0 avait dix pages en erreur 500 alors que ses
       # gabarits se rendaient. On parcourt donc TOUTES les pages du plugin

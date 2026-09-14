@@ -3,6 +3,15 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.5.1] — 2026-09-14
+
+### Ajouté
+
+- **La CI éprouve les garde-fous du modèle** — cinq cas : les deux sens de la cohérence entre
+  niveaux, l'absence de contrainte hors production, et l'exposition externe selon la
+  classification. Un garde-fou non éprouvé n'en est pas un : celui de l'exposition externe n'a
+  rien refusé pendant deux versions sans que rien ne le signale.
+
 ## [0.5.0] — 2026-09-14
 
 ### Changé — les deux niveaux ne se confondent plus
