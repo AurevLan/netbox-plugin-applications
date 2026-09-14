@@ -1,0 +1,207 @@
+{% extends 'base/layout.html' %}
+
+{% block title %}Démarrer avec le catalogue applicatif{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col">
+    <h1 class="h2">Créer une fiche applicative</h1>
+    <p class="text-muted">
+      Ce parcours explique le modèle, puis regarde l'état réel de votre catalogue
+      pour vous dire ce qu'il reste à faire.
+    </p>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12 col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="h1 mb-0">{{ nb_applications }}</div>
+        <div class="text-muted">application{{ nb_applications|pluralize }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="h1 mb-0">{{ nb_deploiements }}</div>
+        <div class="text-muted">déploiement{{ nb_deploiements|pluralize }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="h1 mb-0">{{ nb_referentiels }}</div>
+        <div class="text-muted">valeurs de référentiel</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <h2 class="card-header">Le principe, en une minute</h2>
+  <div class="card-body">
+    <p>
+      <strong>Deux objets, et la distinction n'est pas administrative.</strong>
+      Une application vit dans plusieurs environnements à la fois, et ce qui les
+      sépare est précisément ce qui compte en exploitation.
+    </p>
+    <div class="row">
+      <div class="col-12 col-md-6 mb-3">
+        <div class="border rounded p-3 h-100">
+          <h3 class="h5">L'application — le service</h3>
+          <p class="text-muted mb-2">Ce qui est vrai quel que soit l'environnement.</p>
+          <ul class="mb-0">
+            <li>son client, ses référents</li>
+            <li>sa criticité métier</li>
+            <li>ses engagements de continuité (RTO, RPO)</li>
+            <li>la sensibilité des données traitées</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 mb-3">
+        <div class="border rounded p-3 h-100">
+          <h3 class="h5">Le déploiement — une instance</h3>
+          <p class="text-muted mb-2">Ce qui change d'un environnement à l'autre.</p>
+          <ul class="mb-0">
+            <li>les machines qui le portent</li>
+            <li>sa plage de maintenance</li>
+            <li>son exposition à l'externe</li>
+            <li>son URL d'accès</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="alert alert-info mb-0">
+      <strong>Pourquoi ce partage.</strong> Porter les machines ou la plage de maintenance
+      sur l'application supposerait que la production et la recette partagent les mêmes.
+      L'erreur ne se voit pas à la saisie : elle se découvre le jour où l'on interrompt la
+      production en croyant toucher la recette.
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <h2 class="card-header">Où vous en êtes</h2>
+  <div class="list-group list-group-flush">
+    {% for etape in etapes %}
+      <div class="list-group-item">
+        <div class="d-flex align-items-start">
+          <div class="me-3">
+            {% if etape.faite %}
+              <span class="badge bg-green">{{ etape.numero }}</span>
+            {% else %}
+              <span class="badge bg-orange">{{ etape.numero }}</span>
+            {% endif %}
+          </div>
+          <div class="flex-fill">
+            <div class="fw-bold">{{ etape.titre }}</div>
+
+            {% if etape.numero == 1 %}
+              <p class="text-muted mb-2">
+                Les listes déroulantes — criticités, environnements, authentification — sont
+                des objets que vous gérez vous-même. Ajouter une valeur ne demande ni fichier
+                à éditer, ni redémarrage.
+              </p>
+              <a href="{% url 'plugins:netbox_applications:environment_list' %}" class="btn btn-sm btn-outline-secondary">
+                Voir les environnements
+              </a>
+
+            {% elif etape.numero == 2 %}
+              <p class="text-muted mb-2">
+                Ne renseignez que ce que vous savez : tout est facultatif sauf le nom.
+                L'identifiant <code>APP-0001</code> est attribué automatiquement.
+              </p>
+              <a href="{% url 'plugins:netbox_applications:application_add' %}" class="btn btn-sm btn-primary">
+                Créer une application
+              </a>
+
+            {% elif etape.numero == 3 %}
+              <p class="text-muted mb-2">
+                Un déploiement par environnement où l'application tourne. Le modèle refuse
+                deux fiches pour le même environnement.
+              </p>
+              {% if etape.reste %}
+                <div class="alert alert-warning py-2 mb-2">
+                  <strong>Sans aucun déploiement :</strong>
+                  {% for application in etape.reste %}
+                    <a href="{{ application.get_absolute_url }}">{{ application.name }}</a>{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </div>
+              {% endif %}
+              <a href="{% url 'plugins:netbox_applications:deployment_add' %}" class="btn btn-sm btn-primary">
+                Ajouter un déploiement
+              </a>
+
+            {% elif etape.numero == 4 %}
+              <p class="text-muted mb-2">
+                C'est ce rattachement qui répond, en incident, à « cette machine sert à quoi ? ».
+                Sans lui, le catalogue reste une liste sans prise sur l'infrastructure.
+              </p>
+              {% if etape.reste %}
+                <div class="alert alert-warning py-2 mb-2">
+                  <strong>Sans machine rattachée :</strong>
+                  {% for deploiement in etape.reste %}
+                    <a href="{{ deploiement.get_absolute_url }}">{{ deploiement }}</a>{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card mb-4">
+  <h2 class="card-header">Les quatre mots qui arrêtent tout le monde</h2>
+  <table class="table table-hover attr-table mb-0">
+    <tr>
+      <th scope="row" style="width: 22%">RTO</th>
+      <td>Combien de temps le service peut rester <em>interrompu</em>. Un RTO de 4 heures
+          engage à remettre en service sous 4 heures.</td>
+    </tr>
+    <tr>
+      <th scope="row">RPO</th>
+      <td>Combien de <em>données</em> on accepte de perdre. Un RPO d'une heure
+          <strong>interdit</strong> une sauvegarde quotidienne — c'est un engagement, pas un souhait.</td>
+    </tr>
+    <tr>
+      <th scope="row">Horaires de service</th>
+      <td>Quand il faut <strong>répondre</strong>. À ne pas confondre avec la plage de
+          maintenance, qui dit quand on peut <strong>interrompre</strong>.</td>
+    </tr>
+    <tr>
+      <th scope="row">Authentification</th>
+      <td>« Locale » n'est pas un détail : elle signale des comptes qui
+          <strong>échappent à la révocation centralisée</strong>. C'est cette liste qu'on ouvre
+          le jour où quelqu'un quitte l'organisation.</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2 class="card-header">Ce que le catalogue sait répondre</h2>
+  <div class="list-group list-group-flush">
+    <a class="list-group-item list-group-item-action"
+       href="{% url 'plugins:netbox_applications:application_list' %}?authentication_centralized=false">
+      Quelles applications ont des comptes hors révocation centralisée ?
+    </a>
+    <a class="list-group-item list-group-item-action"
+       href="{% url 'plugins:netbox_applications:deployment_list' %}?production=true">
+      Qu'est-ce qui tourne en production ?
+    </a>
+    <a class="list-group-item list-group-item-action"
+       href="{% url 'plugins:netbox_applications:deployment_list' %}?external_facing=true">
+      Quels déploiements sont exposés à l'externe ?
+    </a>
+    <a class="list-group-item list-group-item-action"
+       href="{% url 'plugins:netbox_applications:application_list' %}?personal_data=true">
+      Lesquelles traitent des données personnelles ?
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -36,6 +36,8 @@ def _reference_urls(modele):
 
 
 urlpatterns = [
+    # Parcours guidé — première entrée du menu, première page qu'on ouvre.
+    path("demarrer/", views.DemarrerView.as_view(), name="demarrer"),
     # Applications
     path("applications/", views.ApplicationListView.as_view(), name="application_list"),
     path("applications/add/", views.ApplicationEditView.as_view(), name="application_add"),

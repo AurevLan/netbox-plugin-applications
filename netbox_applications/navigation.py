@@ -29,6 +29,13 @@ def _item(nom_modele, libelle, titre_ajout):
 
 
 catalogue = (
+    # En tête : c'est la page qui explique le reste, et celle qui dit ce qui
+    # est resté à moitié fait.
+    PluginMenuItem(
+        link="plugins:netbox_applications:demarrer",
+        link_text="Démarrer",
+        permissions=["netbox_applications.view_application"],
+    ),
     _item("Application", "Applications", "Ajouter une application"),
     _item("Deployment", "Déploiements", "Ajouter un déploiement"),
 )

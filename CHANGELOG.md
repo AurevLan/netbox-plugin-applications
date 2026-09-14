@@ -3,6 +3,27 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.9.0] — 2026-09-14
+
+### Ajouté — un parcours guidé qui sait où vous en êtes
+
+Nouvelle entrée **Applications → Démarrer**.
+
+- **Le modèle expliqué en une minute** : pourquoi deux objets, et ce que chacun porte. Le point
+  de blocage d'un nouveau venu n'est pas la syntaxe d'un formulaire, c'est de comprendre ce
+  partage — et l'erreur ne se voit pas à la saisie, elle se découvre le jour où l'on interrompt
+  la production en croyant toucher la recette.
+- **Quatre étapes, marquées faites ou non d'après l'état réel de la base.**
+- **Ce qui est resté en chemin est nommé** : les applications sans aucun déploiement, les
+  déploiements sans machine rattachée, avec un lien vers chacun. C'est ce qui rend la page utile
+  bien après la première prise en main.
+- **Un glossaire des quatre mots qui arrêtent tout le monde** — RTO, RPO, horaires de service, et
+  pourquoi une authentification « locale » n'est pas un détail.
+- **Les questions que le catalogue sait déjà répondre**, en liens cliquables vers les filtres.
+
+6 tests couvrent la page, dont deux qui vérifient qu'elle ne signale **pas** ce qui est complet :
+une page d'accueil qui crie au loup en permanence cesse d'être lue.
+
 ## [0.8.1] — 2026-09-14
 
 ### Corrigé

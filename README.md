@@ -3,7 +3,7 @@
 [![Contrôles](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml)
 [![Scorecard OpenSSF](https://api.scorecard.dev/projects/github.com/AurevLan/netbox-plugin-applications/badge)](https://scorecard.dev/viewer/?uri=github.com/AurevLan/netbox-plugin-applications)
-[![Couverture](https://img.shields.io/badge/couverture-98.2%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
+[![Couverture](https://img.shields.io/badge/couverture-98.3%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![NetBox](https://img.shields.io/badge/NetBox-%E2%89%A5%204.7.0-blue)](https://netbox.dev)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
@@ -115,7 +115,7 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 
 | Contrôle | Portée mesurée | Ce qu'il attrape |
 |---|---|---|
-| **Tests** | **39 tests**, couverture **98,2 %** | les règles du modèle et l'atteignabilité des pages |
+| **Tests** | **45 tests**, couverture **98,3 %** | les règles du modèle et l'atteignabilité des pages |
 | **Parcours des pages** | **48 pages** — liste, création, fiche et édition des 12 modèles | une vue en erreur 500, du texte de gabarit fuitant dans le HTML |
 | **Règles métier** | **3 règles**, éprouvées dans les deux sens | un garde-fou muet, ou trop large |
 | **Recherche globale** | **12 index**, 5 recherches | des objets invisibles depuis la barre de recherche |
@@ -338,11 +338,24 @@ echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin
 
 ## Utilisation
 
+### Par où commencer
+
+Le menu **Applications** s'ouvre sur **Démarrer** — un parcours guidé qui explique le modèle en
+une minute, puis **regarde l'état réel de votre catalogue** :
+
+- combien d'applications, de déploiements, de valeurs de référentiel ;
+- **quelles applications n'ont encore aucun déploiement** ;
+- **quels déploiements ne sont rattachés à aucune machine**.
+
+C'est ce dernier point qui le rend utile bien après la première prise en main : la page est une
+liste de ce qui est resté à moitié fait. Elle rappelle aussi ce que veulent dire RTO, RPO,
+horaires de service et authentification « locale » — les quatre mots qui arrêtent tout le monde.
+
 ### Interface
 
 Menu **Applications**, en deux groupes :
 
-- **Catalogue** — *Applications* et *Déploiements*, ce qu'on consulte tous les jours.
+- **Catalogue** — *Démarrer*, *Applications* et *Déploiements*, ce qu'on consulte tous les jours.
 - **Référentiels** — les dix listes de valeurs, qu'on modifie rarement.
 
 La fiche d'une application porte un onglet **Déploiements** dont le badge affiche leur nombre.

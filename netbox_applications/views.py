@@ -1,4 +1,6 @@
 from django.db.models import Count
+from django.shortcuts import render
+from django.views import View
 
 from extras.ui.panels import CustomFieldsPanel, TagsPanel
 from netbox.ui import layout
@@ -117,6 +119,74 @@ def _build_reference_views(modele, table, filtre, formulaire):
 
 for _modele, _table, _filtre, _form in _REFERENCES:
     _build_reference_views(_modele, _table, _filtre, _form)
+
+
+# --- Parcours guidé -------------------------------------------------------------
+
+
+class DemarrerView(View):
+    """Parcours guidé de création d'une fiche applicative.
+
+    POURQUOI UNE PAGE ET PAS UNE DOCUMENTATION. Le point de blocage d'un
+    nouveau venu n'est pas la syntaxe d'un formulaire : c'est de comprendre
+    POURQUOI il y a deux objets, et de savoir CE QU'IL LUI RESTE À FAIRE.
+
+    Cette page répond aux deux. Elle explique le partage application /
+    déploiement, puis regarde l'état RÉEL de la base : combien d'applications,
+    lesquelles n'ont encore aucun déploiement, lesquelles n'ont aucune VM
+    rattachée. Elle reste donc utile après la première prise en main — c'est
+    une liste de ce qui est resté à moitié fait.
+    """
+
+    def get(self, request):
+        applications = models.Application.objects.annotate(
+            nb_deploiements=Count("deployments", distinct=True)
+        )
+        # Ce qui est resté en chemin : le vrai apport de la page.
+        sans_deploiement = applications.filter(nb_deploiements=0)
+        sans_vm = models.Deployment.objects.annotate(nb_vm=Count("virtual_machines", distinct=True)).filter(
+            nb_vm=0
+        )
+
+        etapes = [
+            {
+                "numero": 1,
+                "titre": "Vérifier les référentiels",
+                "faite": models.Environment.objects.exists(),
+                "reste": None,
+            },
+            {
+                "numero": 2,
+                "titre": "Créer l'application",
+                "faite": applications.exists(),
+                "reste": None,
+            },
+            {
+                "numero": 3,
+                "titre": "Ajouter un déploiement par environnement",
+                "faite": applications.exists() and not sans_deploiement.exists(),
+                "reste": sans_deploiement,
+            },
+            {
+                "numero": 4,
+                "titre": "Rattacher les machines",
+                "faite": models.Deployment.objects.exists() and not sans_vm.exists(),
+                "reste": sans_vm,
+            },
+        ]
+
+        return render(
+            request,
+            "netbox_applications/demarrer.html",
+            {
+                "etapes": etapes,
+                "nb_applications": applications.count(),
+                "nb_deploiements": models.Deployment.objects.count(),
+                "nb_referentiels": sum(modele.objects.count() for modele in models.REFERENCES),
+                "sans_deploiement": sans_deploiement,
+                "sans_vm": sans_vm,
+            },
+        )
 
 
 # --- Application ---------------------------------------------------------------

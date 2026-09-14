@@ -119,3 +119,56 @@ class FiltresAtteignablesTest(TestCase):
             for libelle in libelles:
                 with self.subTest(url=url, libelle=libelle):
                     self.assertIn(libelle, html)
+
+
+class ParcoursGuideTest(TestCase):
+    """Le parcours guidé doit dire VRAI sur l'état de la base.
+
+    Une page d'accueil qui affiche « tout est fait » alors qu'il reste du
+    travail est pire qu'une absence de page : elle fait croire que c'est fini.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_superuser("parcours", "p@exemple.invalid", "x")
+        cls.url = reverse("plugins:netbox_applications:demarrer")
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_the_page_answers(self):
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_no_template_text_leaks(self):
+        html = self.client.get(self.url).content.decode()
+        for motif in PARASITES:
+            with self.subTest(motif=motif):
+                self.assertNotIn(motif, html)
+
+    def test_it_explains_the_split_between_the_two_objects(self):
+        html = self.client.get(self.url).content.decode()
+        for attendu in ("le service", "une instance", "RTO", "RPO"):
+            with self.subTest(attendu=attendu):
+                self.assertIn(attendu, html)
+
+    def test_it_names_an_application_left_without_deployment(self):
+        orpheline = Application.objects.create(name="restée en chemin")
+        html = self.client.get(self.url).content.decode()
+        self.assertIn("restée en chemin", html)
+        self.assertIn(orpheline.get_absolute_url(), html)
+
+    def test_a_complete_application_is_not_flagged(self):
+        """Signaler une application complète serait un faux positif permanent."""
+        complete = Application.objects.create(name="complète")
+        for environnement in Environment.objects.all():
+            Deployment.objects.create(application=complete, environment=environnement)
+        html = self.client.get(self.url).content.decode()
+        debut = html.index("Sans aucun déploiement") if "Sans aucun déploiement" in html else None
+        if debut is not None:
+            self.assertNotIn("complète", html[debut : debut + 600])
+
+    def test_the_counts_match_the_database(self):
+        Application.objects.create(name="comptée")
+        html = self.client.get(self.url).content.decode()
+        self.assertIn(f">{Application.objects.count()}</div>", html)
