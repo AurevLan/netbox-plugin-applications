@@ -115,7 +115,7 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 
 | Contrôle | Portée mesurée | Ce qu'il attrape |
 |---|---|---|
-| **Tests** | **45 tests**, couverture **98,3 %** | les règles du modèle et l'atteignabilité des pages |
+| **Tests** | **51 tests**, couverture **98,3 %** | les règles du modèle et l'atteignabilité des pages |
 | **Parcours des pages** | **48 pages** — liste, création, fiche et édition des 12 modèles | une vue en erreur 500, du texte de gabarit fuitant dans le HTML |
 | **Règles métier** | **3 règles**, éprouvées dans les deux sens | un garde-fou muet, ou trop large |
 | **Recherche globale** | **12 index**, 5 recherches | des objets invisibles depuis la barre de recherche |

@@ -1,8 +1,10 @@
 from rest_framework import serializers
 
+from netbox.api.fields import SerializedPKRelatedField
 from netbox.api.serializers import NetBoxModelSerializer
 from tenancy.api.serializers import ContactSerializer, TenantSerializer
 from virtualization.api.serializers import VirtualMachineSerializer
+from virtualization.models import VirtualMachine
 
 from .. import models
 
@@ -131,7 +133,18 @@ class DeploymentSerializer(NetBoxModelSerializer):
     environment = EnvironmentSerializer(nested=True)
     status = DeploymentStatusSerializer(nested=True, required=False, allow_null=True)
     maintenance_window = MaintenanceWindowSerializer(nested=True, required=False, allow_null=True)
-    virtual_machines = VirtualMachineSerializer(nested=True, many=True, required=False)
+    # SerializedPKRelatedField et NON le sérialiseur imbriqué directement :
+    # une relation multiple imbriquée est LISIBLE mais pas INSCRIPTIBLE, et DRF
+    # refuse l'écriture avec « The .update() method does not support writable
+    # nested fields ». Ce champ accepte des identifiants en écriture tout en
+    # restituant les objets complets en lecture.
+    virtual_machines = SerializedPKRelatedField(
+        queryset=VirtualMachine.objects.all(),
+        serializer=VirtualMachineSerializer,
+        nested=True,
+        many=True,
+        required=False,
+    )
 
     class Meta:
         model = models.Deployment

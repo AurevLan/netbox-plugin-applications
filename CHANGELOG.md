@@ -3,6 +3,22 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.9.1] — 2026-09-14
+
+### Corrigé
+
+- **Rattacher une machine à un déploiement par l'API répondait HTTP 500.** Le champ
+  `virtual_machines` était déclaré comme sérialiseur imbriqué : lisible, mais pas inscriptible.
+  DRF refuse l'écriture d'une relation multiple imbriquée. Il emploie désormais
+  `SerializedPKRelatedField`, le champ prévu par NetBox pour ce cas — des identifiants en
+  écriture, les objets complets en lecture.
+- Le défaut touchait aussi la **création** d'un déploiement avec ses machines.
+
+> **Pourquoi personne ne l'avait vu** : l'interface graphique passe par un formulaire Django, pas
+> par l'API, et aucun test n'écrivait par l'API. **6 tests d'écriture** comblent ce trou — dont
+> la vérification que le format imposé du contact métier est refusé par l'API, et pas seulement
+> dans l'interface.
+
 ## [0.9.0] — 2026-09-14
 
 ### Ajouté — un parcours guidé qui sait où vous en êtes
