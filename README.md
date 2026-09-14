@@ -137,6 +137,26 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 | **Dependabot** | des outils de sécurité épinglés vieillissent, et leurs bases de vulnérabilités avec eux |
 | **pre-commit** | ce qui est refusé en intégration continue l'est avant le commit |
 
+### La note Scorecard, et ce qu'elle reproche
+
+**5,6 / 10** au dernier relevé. Le badge est vivant : il change quand le dépôt change. Les points
+retirés, et ce qu'on en fait :
+
+| Critère | Note | Décision |
+|---|---|---|
+| **Branch-Protection** | 0 | à activer — un réglage du dépôt, pas du code |
+| **Code-Review** | 0 | projet à un seul mainteneur : aucune revue par un tiers n'est possible aujourd'hui |
+| **Packaging** | — | pas de publication PyPI ; l'installation se fait depuis un tag de ce dépôt |
+| **Signed-Releases** | — | les artefacts ne sont pas signés |
+| **Fuzzing** | 0 | sans objet : le plugin ne traite aucune entrée non fiable, ni format binaire |
+| **Security-Policy** | 4 → | politique enrichie : délais d'engagement, versions suivies |
+| **Pinned-Dependencies** | 4 → | actions épinglées par empreinte depuis la 0.8.0 ; la note suit au prochain relevé |
+| Token-Permissions, SAST, Vulnerabilities, License, Dangerous-Workflow, Dependency-Update-Tool | 9-10 | |
+
+**Un critère à 0 n'est pas toujours un défaut à corriger.** « Code-Review » mesure la revue par
+un tiers : sur un projet à un mainteneur, l'exiger reviendrait à se relire soi-même dans une
+interface différente. C'est dit ici plutôt que maquillé.
+
 ### Ce qui n'est pas couvert
 
 Dit ici plutôt que découvert à l'usage :

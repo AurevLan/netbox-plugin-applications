@@ -3,6 +3,22 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.8.1] — 2026-09-14
+
+### Corrigé
+
+- La commande de couverture de l'intégration continue écrivait dans un répertoire non
+  inscriptible par l'utilisateur de l'image : elle échouait **avant d'avoir lancé le moindre
+  test**. Éprouvée localement depuis un autre répertoire, la différence n'apparaissait pas.
+
+### Sécurité
+
+- **Politique de sécurité enrichie** : versions suivies, et délais d'engagement explicites —
+  accusé de réception sous 72 h, évaluation sous 7 jours, correctif ou explication sous 90 jours.
+
+> **Première version dont l'intégration continue a été vérifiée verte AVANT la pose du tag.**
+> C'est la règle que le projet s'était donnée, et que la 0.8.0 avait déjà enfreinte.
+
 ## [0.8.0] — 2026-09-14
 
 ### Corrigé — une garantie annoncée qui n'existait pas

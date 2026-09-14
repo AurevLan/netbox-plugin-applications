@@ -2,9 +2,15 @@
 
 ## Versions suivies
 
-| Version | Suivie |
-|---|---|
-| 0.1.x | ✅ |
+Seule la **dernière version publiée** reçoit des correctifs. Le plugin n'a pas atteint la 1.0 :
+son interface peut encore changer d'une version mineure à l'autre.
+
+| Version | Suivie | Remarque |
+|---|---|---|
+| 0.8.x | ✅ | version courante |
+| ≤ 0.7.x | ❌ | monter de version |
+
+Les correctifs sont publiés sous forme d'un nouveau **tag** ; il n'y a pas de rétroportage.
 
 ## Signaler une vulnérabilité
 
@@ -17,7 +23,16 @@ privé avec les mainteneurs.
 Merci d'indiquer : la version du plugin et de NetBox, les étapes de reproduction, et l'impact
 que vous estimez.
 
-Vous recevrez un accusé de réception sous 72 heures.
+### Ce à quoi vous pouvez vous attendre
+
+| Délai | Engagement |
+|---|---|
+| **72 heures** | accusé de réception |
+| **7 jours** | première évaluation : gravité estimée, et si la faille est confirmée |
+| **90 jours** | correctif publié, ou explication motivée du délai |
+
+Nous vous créditerons dans le journal des versions, sauf si vous préférez l'anonymat. Aucune
+prime n'est proposée : ce projet n'a pas de budget.
 
 ## Surface d'attaque du plugin
 
@@ -48,6 +63,12 @@ Ce que le plugin **ne fait pas**, et qui réduit d'autant la surface :
 | `bandit` | vulnérabilités Python courantes |
 | `pip-audit` | vulnérabilités connues des dépendances |
 | `detect-secrets` | secrets commités par inadvertance |
+| **CodeQL** | analyse statique approfondie, hebdomadaire |
+| **Scorecard OpenSSF** | pratiques de sécurité du dépôt, évaluées par un tiers |
+| **Suite de tests** | les règles du modèle, éprouvées dans les deux sens |
+
+Les actions GitHub sont **épinglées par empreinte de commit** : une étiquette mobile peut être
+redéplacée vers un commit quelconque, qui s'exécuterait avec les droits du workflow.
 
 ## Limite connue
 
