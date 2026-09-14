@@ -110,6 +110,7 @@ class ApplicationSerializer(NetBoxModelSerializer):
             "authentication",
             "technical_contact",
             "project_manager",
+            "business_contact",
             "documentation_url",
             "description",
             "comments",

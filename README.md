@@ -46,6 +46,7 @@ interrompt la production en croyant toucher la recette.
 | Données personnelles | RGPD |
 | **Authentification** | Keycloak · OIDC · SAML · LDAP · AD · **Locale** · Aucune |
 | Référents | technique et chef de projet, des `tenancy.Contact` |
+| **Contact métier** | **champ libre, mais au format adresse imposé** — voir ci-dessous |
 
 Toutes les valeurs de ces listes s'ajoutent **dans l'interface** — voir
 [Les référentiels](#les-référentiels).
@@ -89,6 +90,12 @@ aussi faux qu'un contrôle absent.
 - **Cycle de vie du service ≠ état d'instance.** Le premier dit si l'organisation rend encore
   le service, le second si *cette instance-là* tourne. Un service en exploitation peut avoir une
   instance de développement encore planifiée.
+- **Contact métier ≠ référent technique.** Les deux référents pointent vers l'annuaire de
+  contacts de NetBox ; le responsable métier n'y figure que rarement — c'est souvent un
+  responsable de service ou une liste de diffusion. Le champ est donc **libre**, mais son
+  **format est imposé** : une adresse de courriel, la seule chose qu'on puisse à la fois valider
+  et utiliser en incident. Exiger la création préalable d'un contact ferait laisser le champ
+  vide, ce qui est pire qu'une adresse saisie à la main.
 - **Authentification « Locale » n'est pas un détail.** Elle signale des comptes **échappant à la
   révocation centralisée**. Le jour où quelqu'un quitte l'organisation, c'est cette liste qu'on
   ouvre.
@@ -422,6 +429,7 @@ Les filtres par valeur attendent un **identifiant**, pas un slug :
 | Quelles applications utilisent telle authentification ? | `?authentication_id=<id>` |
 | Lesquelles ont un déploiement dans cet environnement ? | `?environment_id=<id>` |
 | Lesquelles traitent des données personnelles ? | `?personal_data=true` |
+| Lesquelles relèvent de tel service métier ? | `?business_contact=direction-rh` — recherche **partielle**, par domaine ou par service |
 | Quels déploiements sont exposés à l'externe ? | `/deployments/?external_facing=true` |
 
 ---

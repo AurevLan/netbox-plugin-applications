@@ -163,6 +163,7 @@ class ApplicationTable(NetBoxTable):
     personal_data = columns.BooleanColumn(verbose_name="RGPD")
     technical_contact = tables.Column(linkify=True, verbose_name="Réf. technique")
     project_manager = tables.Column(linkify=True, verbose_name="Réf. projet")
+    business_contact = tables.EmailColumn(verbose_name="Contact métier")
     deployment_count = columns.LinkedCountColumn(
         viewname="plugins:netbox_applications:deployment_list",
         url_params={"application_id": "pk"},
@@ -189,6 +190,7 @@ class ApplicationTable(NetBoxTable):
             "authentication",
             "technical_contact",
             "project_manager",
+            "business_contact",
             "documentation_url",
             "description",
             "tags",

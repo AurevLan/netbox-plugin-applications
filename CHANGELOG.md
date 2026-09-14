@@ -3,6 +3,23 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.7.0] — 2026-09-14
+
+### Ajouté
+
+- **Contact métier** sur l'application — un champ **libre**, à la différence des deux référents
+  qui pointent vers l'annuaire de contacts de NetBox. Le responsable métier n'y figure que
+  rarement : c'est souvent un responsable de service ou une liste de diffusion, et exiger sa
+  création préalable ferait laisser le champ vide.
+- **Le format est imposé** : une adresse de courriel, refusée si elle n'en est pas une. C'est la
+  seule chose qu'on puisse à la fois valider et utiliser pour joindre quelqu'un en incident — à
+  la différence d'un nom.
+- Le champ est **filtrable par correspondance partielle** (`?business_contact=direction-rh`),
+  pour retrouver toutes les applications relevant d'un même service, **indexé** dans la
+  recherche globale, exposé par l'API et affiché en lien `mailto:` sur la fiche.
+
+> Le champ reste **facultatif** : le rendre obligatoire invaliderait les fiches existantes.
+
 ## [0.6.0] — 2026-09-14
 
 ### Ajouté — la recherche globale voit enfin le plugin

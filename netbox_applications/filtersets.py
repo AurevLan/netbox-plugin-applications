@@ -97,6 +97,10 @@ class ApplicationFilterSet(NetBoxModelFilterSet):
         field_name="lifecycle_status__is_operational", label="En service"
     )
 
+    # « contient » plutôt qu'égalité : on cherche par domaine ou par service,
+    # « @direction-rh », pas par adresse exacte qu'on devrait connaître.
+    business_contact = django_filters.CharFilter(lookup_expr="icontains", label="Contact métier (contient)")
+
     class Meta:
         model = Application
         fields = ("id", "name", "application_id", "personal_data")
@@ -105,7 +109,10 @@ class ApplicationFilterSet(NetBoxModelFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) | Q(application_id__icontains=value) | Q(description__icontains=value)
+            Q(name__icontains=value)
+            | Q(application_id__icontains=value)
+            | Q(description__icontains=value)
+            | Q(business_contact__icontains=value)
         )
 
 

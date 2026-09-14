@@ -37,6 +37,8 @@
         <tr><th scope="row">Référent chef de projet</th>
             <td>{{ object.project_manager|linkify|placeholder }}
               {% if object.project_manager.email %}<br><small class="text-muted">{{ object.project_manager.email }}</small>{% endif %}</td></tr>
+        <tr><th scope="row">Contact métier</th>
+            <td>{% if object.business_contact %}<a href="mailto:{{ object.business_contact }}">{{ object.business_contact }}</a>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
       </table>
     </div>
   </div>

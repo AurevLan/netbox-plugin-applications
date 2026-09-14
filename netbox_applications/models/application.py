@@ -139,6 +139,21 @@ class Application(NetBoxModel):
         blank=True,
     )
 
+    # Champ LIBRE, à la différence des deux référents ci-dessus : le contact
+    # métier est souvent quelqu'un qui ne figure pas dans l'annuaire de contacts
+    # de NetBox — un responsable de service, une liste de diffusion. Exiger sa
+    # création préalable ferait laisser le champ vide, ce qui est pire.
+    #
+    # Libre ne veut pas dire quelconque : EmailField IMPOSE le format. Une
+    # adresse est ce dont on a besoin en incident, et c'est vérifiable — à la
+    # différence d'un nom, qu'on ne peut ni valider ni utiliser pour joindre
+    # quelqu'un.
+    business_contact = models.EmailField(
+        blank=True,
+        verbose_name="Contact métier",
+        help_text="Adresse de courriel du responsable métier, ou de sa liste de diffusion.",
+    )
+
     documentation_url = models.URLField(blank=True, verbose_name="Documentation")
     description = models.CharField(max_length=200, blank=True, verbose_name="Description")
     comments = models.TextField(blank=True, verbose_name="Commentaires")

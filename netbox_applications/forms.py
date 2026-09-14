@@ -176,7 +176,7 @@ class ApplicationForm(NetBoxModelForm):
         FieldSet("lifecycle_status", "criticality", name="Cycle de vie"),
         FieldSet("rto", "rpo", "service_hours", name="Continuité de service"),
         FieldSet("data_classification", "personal_data", "authentication", name="Sécurité"),
-        FieldSet("technical_contact", "project_manager", name="Référents"),
+        FieldSet("technical_contact", "project_manager", "business_contact", name="Référents"),
         FieldSet("tags", name="Divers"),
     )
 
@@ -197,6 +197,7 @@ class ApplicationForm(NetBoxModelForm):
             "authentication",
             "technical_contact",
             "project_manager",
+            "business_contact",
             "comments",
             "tags",
         )
@@ -222,7 +223,13 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
             "authentication_centralized",
             name="Sécurité",
         ),
-        FieldSet("client_id", "technical_contact_id", "project_manager_id", name="Rattachements"),
+        FieldSet(
+            "client_id",
+            "technical_contact_id",
+            "project_manager_id",
+            "business_contact",
+            name="Rattachements",
+        ),
         FieldSet("environment_id", name="Déploiements"),
     )
 
@@ -256,6 +263,9 @@ class ApplicationFilterForm(NetBoxModelFilterSetForm):
     project_manager_id = DynamicModelMultipleChoiceField(
         queryset=Contact.objects.all(), required=False, label="Référent chef de projet"
     )
+    # Recherche partielle : on tape « @direction-rh » pour trouver toutes les
+    # applications dont le métier relève de ce service.
+    business_contact = forms.CharField(required=False, label="Contact métier (contient)")
     # Traverse la relation : « quelles applications sont en production ? »
     environment_id = DynamicModelMultipleChoiceField(
         queryset=Environment.objects.all(), required=False, label="Environnement de déploiement"

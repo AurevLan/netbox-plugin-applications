@@ -35,11 +35,14 @@ class ApplicationIndex(SearchIndex):
         # Devant le nom : un identifiant recherché est recherché exactement.
         ("application_id", 90),
         ("name", 100),
+        # Retrouver toutes les applications d'un service par son adresse est
+        # une question courante en gestion de parc applicatif.
+        ("business_contact", 250),
         ("documentation_url", 300),
         ("description", 500),
         ("comments", 5000),
     )
-    display_attrs = ("client", "lifecycle_status", "criticality", "description")
+    display_attrs = ("client", "lifecycle_status", "criticality", "business_contact")
 
 
 class DeploymentIndex(SearchIndex):
