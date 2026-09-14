@@ -14,6 +14,11 @@ Aucun changement du plugin : c'est la CI elle-même qui échouait, depuis le **p
   cette non-résolution en erreur. Le contrôle échouait donc systématiquement **sur lui-même,
   jamais sur une vulnérabilité**. Corrigé par `--skip-editable` sans `--strict` — vérifié qu'une
   vulnérabilité réelle fait toujours échouer la commande.
+- **`detect-secrets audit --fail-on-unaudited` : cette option n'existe pas.** L'étape échouait
+  sur un argument inconnu, donc à chaque exécution, **sans jamais rien contrôler**. Le contrôle
+  est réécrit avec ce que l'outil offre : la détection est comparée à la référence versionnée, et
+  tout écart — secret nouveau ou ligne déplacée — impose une relecture humaine. Vérifié qu'une
+  clé AWS ajoutée au dépôt le fait échouer.
 - **Le parcours des pages supposait une base vierge.** Toutes les étapes du job d'intégration
   partagent la même base ; deux d'entre elles créaient une application nommée `ci-app`, d'où une
   violation de contrainte d'unicité. L'étape échouait sur ses propres fixtures, pas sur le

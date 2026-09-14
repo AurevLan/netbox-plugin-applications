@@ -47,9 +47,43 @@ jobs:
         # Sans « --strict », une vulnérabilité réelle fait toujours échouer.
         run: pip-audit --skip-editable
       - name: Secrets commités (detect-secrets)
+        # « --fail-on-unaudited » n'existe pas dans detect-secrets : l'étape
+        # échouait sur un argument inconnu, donc à chaque exécution, sans
+        # jamais rien contrôler. Le contrôle est ici écrit avec ce que l'outil
+        # offre réellement.
         run: |
+          set -euo pipefail
           detect-secrets scan --baseline .secrets.baseline
-          detect-secrets audit --report --fail-on-unaudited .secrets.baseline
+          python - <<'CONTROLE'
+          import json
+          import subprocess
+          import sys
+
+          # « generated_at » change à chaque exécution : seul « results » compte.
+          reference = json.loads(subprocess.check_output(['git', 'show', 'HEAD:.secrets.baseline']))
+          courant = json.load(open('.secrets.baseline'))
+
+          if reference['results'] != courant['results']:
+              print('ECHEC : la détection ne correspond plus à la référence versionnée.')
+              print('Un secret potentiel est apparu, ou une ligne référencée a bougé.')
+              print('Relire, puis committer la nouvelle référence :')
+              print('    detect-secrets scan --baseline .secrets.baseline')
+              sys.exit(1)
+
+          reels = [
+              f"{fichier}:{entree['line_number']} ({entree['type']})"
+              for fichier, entrees in courant['results'].items()
+              for entree in entrees
+              if entree.get('is_secret') is True
+          ]
+          if reels:
+              print('ECHEC : des secrets AVÉRÉS figurent dans la référence :')
+              print('\n'.join(f'  {r}' for r in reels))
+              sys.exit(1)
+
+          total = sum(len(e) for e in courant['results'].values())
+          print(f'{total} détections, toutes connues et tenues pour des faux positifs.')
+          CONTROLE
 
   construction:
     name: Construction du paquet
