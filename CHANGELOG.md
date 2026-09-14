@@ -3,6 +3,22 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Corrigé — l'intégration continue n'avait jamais été verte
+
+Aucun changement du plugin : c'est la CI elle-même qui échouait, depuis le **premier commit**.
+
+- **`pip-audit --strict` échouait sur le plugin lui-même.** Il est installé en mode éditable pour
+  être audité et, n'étant pas publié sur PyPI, ne peut pas s'y résoudre ; `--strict` transforme
+  cette non-résolution en erreur. Le contrôle échouait donc systématiquement **sur lui-même,
+  jamais sur une vulnérabilité**. Corrigé par `--skip-editable` sans `--strict` — vérifié qu'une
+  vulnérabilité réelle fait toujours échouer la commande.
+- **Le parcours des pages supposait une base vierge.** Toutes les étapes du job d'intégration
+  partagent la même base ; deux d'entre elles créaient une application nommée `ci-app`, d'où une
+  violation de contrainte d'unicité. L'étape échouait sur ses propres fixtures, pas sur le
+  plugin. Elle emploie maintenant `get_or_create` et des noms qui lui sont propres.
+
 ## [0.7.0] — 2026-09-14
 
 ### Ajouté

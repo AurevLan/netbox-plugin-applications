@@ -40,7 +40,12 @@ jobs:
       - name: Motifs dangereux (bandit)
         run: bandit -c pyproject.toml -r netbox_applications
       - name: Vulnérabilités des dépendances (pip-audit)
-        run: pip-audit --strict
+        # « --skip-editable » : le plugin s'installe en mode éditable pour être
+        # audité, et n'étant pas publié sur PyPI il ne peut pas s'y résoudre.
+        # « --strict » transformait cette non-résolution en échec — le contrôle
+        # échouait donc sur lui-même, jamais sur une vulnérabilité.
+        # Sans « --strict », une vulnérabilité réelle fait toujours échouer.
+        run: pip-audit --skip-editable
       - name: Secrets commités (detect-secrets)
         run: |
           detect-secrets scan --baseline .secrets.baseline
@@ -274,14 +279,23 @@ jobs:
           )
 
           U = get_user_model()
-          user = U.objects.create_superuser('ci', 'ci@example.invalid', 'x')
+          user = U.objects.filter(username='ci').first() or U.objects.create_superuser(
+              'ci', 'ci@example.invalid', 'x'
+          )
 
           # Une valeur dans chaque référentiel : une page de fiche ne se teste
           # pas sans objet à afficher.
+          #
+          # « get_or_create » et des noms propres à CETTE étape : toutes les
+          # étapes de ce job partagent la MÊME base. Supposer qu'elle est vierge
+          # faisait échouer l'étape sur une collision de nom avec les fixtures
+          # de l'étape précédente — pas sur un défaut du plugin.
           for modele in REFERENCES:
-              modele.objects.create(name='ci', slug='ci')
-          app = Application.objects.create(name='ci-app')
-          Deployment.objects.create(application=app, environment=Environment.objects.first())
+              modele.objects.get_or_create(slug='ci-pages', defaults={'name': 'ci-pages'})
+          app, _ = Application.objects.get_or_create(name='ci-pages-app')
+          Deployment.objects.get_or_create(
+              application=app, environment=Environment.objects.first()
+          )
 
           c = Client(raise_request_exception=False)
           c.force_login(user)
