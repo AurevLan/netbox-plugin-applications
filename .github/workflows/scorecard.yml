@@ -1,0 +1,45 @@
+# Scorecard OpenSSF — une note MESURÉE des pratiques de sécurité du dépôt.
+#
+# Pourquoi un outil extérieur plutôt qu'une auto-évaluation : il applique les
+# mêmes critères à tous les dépôts, et personne ici ne choisit la note. Il
+# vérifie notamment l'épinglage des actions par empreinte, les permissions des
+# workflows, la présence d'une politique de sécurité, l'analyse statique et la
+# fraîcheur des dépendances.
+#
+# Le résultat est publié dans l'onglet « Security » du dépôt, et alimente le
+# badge du README.
+name: Scorecard OpenSSF
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: "0 5 * * 1"
+  push:
+    branches: [main]
+
+permissions: read-all
+
+jobs:
+  analyse:
+    name: Analyse Scorecard
+    runs-on: ubuntu-latest
+    permissions:
+      # Pour publier le résultat dans l'onglet « Security ».
+      security-events: write
+      # Pour que le badge puisse être servi par l'API publique.
+      id-token: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@05b42c624433fc40578a4040d5cf5e36ddca8cde # v2.4.2
+        with:
+          results_file: scorecard.sarif
+          results_format: sarif
+          # Rend la note interrogeable publiquement, donc affichable en badge.
+          publish_results: true
+
+      - uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: scorecard.sarif

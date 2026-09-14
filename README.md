@@ -1,5 +1,13 @@
 # netbox-plugin-applications
 
+[![Contrôles](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml)
+[![Scorecard OpenSSF](https://api.scorecard.dev/projects/github.com/AurevLan/netbox-plugin-applications/badge)](https://scorecard.dev/viewer/?uri=github.com/AurevLan/netbox-plugin-applications)
+[![Couverture](https://img.shields.io/badge/couverture-98.2%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
+[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
+[![NetBox](https://img.shields.io/badge/NetBox-%E2%89%A5%204.7.0-blue)](https://netbox.dev)
+[![Licence MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
+
 **Catalogue applicatif CMDB pour NetBox** — applications, déploiements multi-environnements,
 champs ITIL.
 
@@ -99,6 +107,55 @@ aussi faux qu'un contrôle absent.
 - **Authentification « Locale » n'est pas un détail.** Elle signale des comptes **échappant à la
   révocation centralisée**. Le jour où quelqu'un quitte l'organisation, c'est cette liste qu'on
   ouvre.
+
+## Ce que la chaîne de contrôle vérifie
+
+Les badges ci-dessus sont **vivants** : ils reflètent la dernière exécution, pas une déclaration
+d'intention. Ce tableau dit ce qui se cache derrière.
+
+| Contrôle | Portée mesurée | Ce qu'il attrape |
+|---|---|---|
+| **Tests** | **39 tests**, couverture **98,2 %** | les règles du modèle et l'atteignabilité des pages |
+| **Parcours des pages** | **48 pages** — liste, création, fiche et édition des 12 modèles | une vue en erreur 500, du texte de gabarit fuitant dans le HTML |
+| **Règles métier** | **3 règles**, éprouvées dans les deux sens | un garde-fou muet, ou trop large |
+| **Recherche globale** | **12 index**, 5 recherches | des objets invisibles depuis la barre de recherche |
+| **Migrations** | appliquées sur une base réelle | un modèle et une migration qui divergent |
+| **ruff** | **9 familles de règles** (`E W F I UP B S DJ RUF`) | style, imports, pièges, motifs dangereux |
+| **bandit** + **CodeQL** | tout le paquet | motifs dangereux, vulnérabilités d'analyse statique |
+| **pip-audit** | dépendances, **aussi chaque lundi** | une vulnérabilité publiée sans qu'on touche au code |
+| **detect-secrets** | arbre git complet | un secret commité, ou une détection nouvelle non relue |
+| **Scorecard OpenSSF** | pratiques du dépôt | note attribuée par un tiers, selon des critères publics |
+
+### Choix de durcissement
+
+| | Pourquoi |
+|---|---|
+| **Aucune dépendance d'exécution** | le plugin n'utilise que ce que NetBox fournit : aucune surface d'attaque ajoutée, aucun conflit de version possible avec l'hôte |
+| **Actions épinglées par empreinte** | une étiquette `v5` peut être redéplacée vers un commit quelconque, qui s'exécuterait avec nos droits ; une empreinte ne change pas de contenu |
+| `permissions: contents: read` | moindre privilège sur tous les workflows |
+| **Qualifié sur 3.12, 3.13 et 3.14** | NetBox 4.7 s'exécute sur 3.14 : ne qualifier que sur 3.12 validerait une version que personne n'exécute |
+| **Dependabot** | des outils de sécurité épinglés vieillissent, et leurs bases de vulnérabilités avec eux |
+| **pre-commit** | ce qui est refusé en intégration continue l'est avant le commit |
+
+### Ce qui n'est pas couvert
+
+Dit ici plutôt que découvert à l'usage :
+
+- **Pas de publication PyPI** — l'installation se fait depuis ce dépôt, à un tag figé.
+- **Pas de SBOM ni de provenance signée** — le paquet se construit, se vérifie avec `twine`, mais
+  n'est pas attesté.
+- **Pas de vérification de types** — NetBox ne publie pas de stubs ; un `mypy` sans eux
+  produirait surtout du bruit.
+- **La couverture porte sur le code du plugin**, migrations et tests exclus.
+
+> **Ce que 98 % ne veulent PAS dire.** La couverture mesure des lignes exécutées, pas des
+> comportements éprouvés. Une bonne part de ce chiffre vient du simple chargement du plugin :
+> ces modules construisent leurs vues, tables et sérialiseurs par des fabriques exécutées à
+> l'import. Le nombre serait élevé même sans un seul test.
+>
+> **Ce qui vaut, ce sont les tests de règles** — ceux qui tentent une opération interdite et
+> vérifient qu'elle est refusée, puis une opération légitime et vérifient qu'elle passe. Le seuil
+> de 95 % sert à repérer une baisse, pas à prouver une qualité.
 
 ---
 
@@ -446,12 +503,29 @@ pre-commit install
 ### Contrôles
 
 ```bash
-ruff check .            # style, imports, pièges courants, motifs dangereux
-ruff format --check .   # formatage
+# Les tests — dans un environnement NetBox, ils ont besoin de sa base
+python manage.py test netbox_applications
+
+# Avec la mesure de couverture, comme en intégration continue
+coverage run --source=netbox_applications --omit='*/migrations/*,*/tests/*' \
+  manage.py test netbox_applications
+coverage report --precision=1 --fail-under=95
+
+# Qualité et sécurité, sans base de données
+ruff check .             # style, imports, pièges courants, motifs dangereux
+ruff format --check .    # formatage
 bandit -c pyproject.toml -r netbox_applications
-pip-audit                # vulnérabilités des dépendances
-detect-secrets scan      # secrets accidentellement commités
+pip-audit --skip-editable   # vulnérabilités des dépendances
+detect-secrets scan --baseline .secrets.baseline
 ```
+
+> **`--keepdb` change tout sur une petite machine.** Créer la base de test de NetBox exécute
+> toutes ses migrations : plusieurs dizaines de minutes sur 1 vCPU, jusqu'à l'épuisement
+> mémoire. Une fois la base créée, la suite s'exécute en une quarantaine de secondes :
+>
+> ```bash
+> python manage.py test netbox_applications --keepdb
+> ```
 
 Tous sont exécutés à chaque commit par `pre-commit`, et à chaque poussée par l'intégration
 continue.

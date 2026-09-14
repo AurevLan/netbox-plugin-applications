@@ -3,7 +3,39 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.8.0] — 2026-09-14
+
+### Corrigé — une garantie annoncée qui n'existait pas
+
+- **La contrainte d'unicité `(application, environnement)` était absente de la base.** La
+  migration 0001 la créait ; la migration 0005 a supprimé l'ancien champ texte `environment`, et
+  PostgreSQL a supprimé avec lui la contrainte qui en dépendait. Le renommage qui suivait a
+  recréé le champ, **pas la contrainte**.
+- **Rien ne pouvait le détecter.** L'état de migration de Django croit toujours la contrainte
+  présente : `makemigrations --check` compare les modèles à l'**état**, jamais à la base réelle.
+  Seul un test qui tente vraiment de créer un doublon l'a révélé — le premier écrit pour ce
+  plugin.
+- Rétablie par la migration `0009`, sans toucher à l'état, qui est déjà correct.
+
+### Ajouté — une suite de tests, et des indicateurs mesurables
+
+- **39 tests**, couverture **98,2 %**. Les règles sont éprouvées **dans les deux sens** : une
+  opération interdite qui doit être refusée, une opération légitime qui doit passer.
+- **Quatre étapes de script noyées dans le YAML de la CI deviennent des tests versionnés** :
+  parcours des 48 pages, garde-fous du modèle, recherche globale, validité des couleurs. Des
+  contrôles écrits en YAML ne sont ni exécutables localement, ni mesurables — et trois d'entre
+  eux ont échoué pendant des mois sans que personne le voie.
+- La couverture doit rester **au-dessus de 95 %**, sans quoi la construction échoue.
+
+### Sécurité
+
+- **Les actions GitHub sont épinglées par empreinte de commit** (10 sur 10). Une étiquette `v5`
+  peut être redéplacée vers un commit quelconque, qui s'exécuterait avec les droits du workflow.
+- **Scorecard OpenSSF** : la note des pratiques du dépôt est mesurée par un tiers, selon des
+  critères publics, et publiée en badge.
+- **Qualification sur Python 3.12, 3.13 et 3.14.** NetBox 4.7 s'exécute sur 3.14 : ne qualifier
+  que sur 3.12 validait une version que personne n'exécute.
+
 
 ### Corrigé — l'intégration continue n'avait jamais été verte
 

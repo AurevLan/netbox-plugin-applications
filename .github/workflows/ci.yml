@@ -1,5 +1,12 @@
 name: Contrôles
 
+# Les actions sont épinglées par EMPREINTE de commit, pas par étiquette. Une
+# étiquette « v5 » peut être redéplacée par son auteur — ou par quiconque prend
+# le contrôle de son dépôt — vers un commit quelconque, qui s'exécuterait ici
+# avec nos droits. L'empreinte, elle, ne peut pas changer de contenu.
+# Le commentaire à droite dit quelle version l'empreinte représente ; Dependabot
+# met les deux à jour ensemble.
+
 on:
   push:
     branches: [main]
@@ -14,13 +21,19 @@ permissions:
 
 jobs:
   qualite:
-    name: Qualité du code
+    name: Qualité du code (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    # NetBox 4.7 s'exécute sur Python 3.14. Ne qualifier que sur 3.12 revenait
+    # à valider une version que personne n'exécute.
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
       - name: Style, imports et pièges courants
@@ -32,8 +45,8 @@ jobs:
     name: Sécurité
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -89,8 +102,8 @@ jobs:
     name: Construction du paquet
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
       - run: pip install build twine
@@ -119,18 +132,20 @@ jobs:
         image: valkey/valkey:9.1-alpine
         ports: ["6379:6379"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Construire une image NetBox avec le plugin
         run: |
           cat > Dockerfile.test <<'DOCKER'
           FROM netboxcommunity/netbox:v4.7-5.1.1
           USER root
           COPY . /plugin/
-          RUN uv pip install --no-cache /plugin/
+          # « coverage » mesure ce que la suite de tests atteint réellement.
+          RUN uv pip install --no-cache /plugin/ coverage==7.6.10
           RUN printf 'PLUGINS = ["netbox_applications"]\n' > /etc/netbox/config/extra.py
           USER 999
           DOCKER
           docker build -f Dockerfile.test -t netbox-plugin-test .
+
       - name: Vérifier que le plugin se charge et que les migrations passent
         run: |
           docker run --rm --network host \
@@ -140,222 +155,21 @@ jobs:
             netbox-plugin-test \
             /opt/netbox/netbox/manage.py migrate
 
-      # Un ColorField n'accepte que six caractères hexadécimaux. Une migration
-      # de données n'appelle pas full_clean() : écrire « red » y passait sans
-      # erreur et produisait un badge sans couleur. Seul ce contrôle le voit.
-      - name: Vérifier que toutes les couleurs sont valides
+      # LA SUITE DE TESTS. Elle a remplacé quatre étapes de script noyées dans
+      # ce fichier : des contrôles écrits en YAML ne sont ni versionnés comme du
+      # code, ni exécutables localement, ni mesurables — et trois d'entre eux ont
+      # échoué pendant des mois sans que personne le voie.
+      #
+      # « --fail-under » : une couverture qui baisse doit faire échouer la
+      # construction, sinon elle baisse.
+      - name: Tests et couverture
         run: |
           docker run --rm --network host \
             -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
             -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
             -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
-            netbox-plugin-test \
-            /opt/netbox/netbox/manage.py shell -c "
-          import re
-          from netbox_applications.models import REFERENCES
-
-          HEXA = re.compile(r'^[0-9a-f]{6}\$')
-          echecs, n = [], 0
-          for modele in REFERENCES:
-              for objet in modele.objects.all():
-                  n += 1
-                  if not HEXA.match(objet.color or ''):
-                      echecs.append(f'{modele.__name__} / {objet.slug} : {objet.color!r}')
-          if not n:
-              raise SystemExit('ECHEC : aucune valeur de référentiel, la migration n a rien créé.')
-          if echecs:
-              raise SystemExit('ECHEC — couleurs invalides\n' + '\n'.join(echecs))
-          print(f'{n} valeurs, toutes avec une couleur valide.')
-          "
-
-      # Un garde-fou non éprouvé n'en est pas un : celui de l'exposition
-      # externe comparait un objet à une chaîne depuis la 0.4.0 et n'a rien
-      # refusé pendant deux versions, sans que rien ne le signale.
-      - name: Éprouver les garde-fous du modèle
-        run: |
-          docker run --rm --network host \
-            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
-            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
-            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
-            netbox-plugin-test \
-            /opt/netbox/netbox/manage.py shell -c "
-          from django.core.exceptions import ValidationError
-          from netbox_applications.models import (
-              Application, Deployment, DataClassification, DeploymentStatus,
-              Environment, LifecycleStatus,
-          )
-
-          retire = LifecycleStatus.objects.get(slug='retire')
-          en_service = LifecycleStatus.objects.get(slug='en-service')
-          actif = DeploymentStatus.objects.get(slug='actif')
-          prod = Environment.objects.get(slug='production')
-          recette = Environment.objects.get(slug='recette')
-
-          app = Application.objects.create(name='ci-app', lifecycle_status=en_service)
-          d_prod = Deployment.objects.create(application=app, environment=prod, status=actif)
-
-          echecs = []
-
-          def refuse(objet, cas, champ):
-              try:
-                  objet.full_clean()
-              except ValidationError as e:
-                  if champ not in e.message_dict:
-                      echecs.append(f'{cas} : refusé mais sur {list(e.message_dict)}')
-              else:
-                  echecs.append(f'{cas} : ACCEPTÉ alors qu il devait être refusé')
-
-          def accepte(objet, cas):
-              try:
-                  objet.full_clean()
-              except ValidationError as e:
-                  echecs.append(f'{cas} : refusé à tort ({e.message_dict})')
-
-          # Cohérence entre les deux niveaux, dans les deux sens.
-          app.lifecycle_status = retire
-          refuse(app, 'retirer le service avec une prod en fonctionnement', 'lifecycle_status')
-          Application.objects.filter(pk=app.pk).update(lifecycle_status=retire)
-          d_prod.refresh_from_db()
-          refuse(d_prod, 'prod en fonctionnement pour un service retiré', 'status')
-
-          # Hors production, aucune contrainte.
-          d_rec = Deployment.objects.create(application=app, environment=recette, status=actif)
-          accepte(d_rec, 'recette en fonctionnement pour un service retiré')
-
-          # Exposition externe d une donnée restreinte.
-          Application.objects.filter(pk=app.pk).update(
-              lifecycle_status=en_service,
-              data_classification=DataClassification.objects.get(slug='restreint'),
-          )
-          d_rec.refresh_from_db(); d_rec.external_facing = True
-          refuse(d_rec, 'exposition externe d une donnée restreinte', 'external_facing')
-
-          Application.objects.filter(pk=app.pk).update(
-              data_classification=DataClassification.objects.get(slug='interne'),
-          )
-          d_rec.refresh_from_db(); d_rec.external_facing = True
-          accepte(d_rec, 'exposition externe d une donnée interne')
-
-          if echecs:
-              raise SystemExit('ECHEC\n' + '\n'.join(echecs))
-          print('Garde-fous éprouvés : 5 cas, tous conformes.')
-          "
-
-      # Déclarer un index ne remplit pas la table, et l'indexation passe par une
-      # tâche de fond : la recherche peut rester muette alors que tout semble en
-      # place. Seule une recherche réelle le montre.
-      - name: Vérifier que la recherche globale trouve les objets
-        run: |
-          docker run --rm --network host \
-            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
-            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
-            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
-            netbox-plugin-test \
-            /opt/netbox/netbox/manage.py shell -c "
-          from netbox.search import get_indexer
-          from netbox.search.backends import search_backend
-          from netbox_applications.models import (
-              Application, AuthenticationMethod, Deployment, Environment, REFERENCES,
-          )
-
-          echecs = []
-
-          # 1. Chaque modèle a bien un index.
-          for modele in (Application, Deployment, *REFERENCES):
-              try:
-                  get_indexer(modele)
-              except KeyError:
-                  echecs.append(f'{modele.__name__} : aucun index de recherche')
-
-          # 2. La recherche trouve réellement, une fois l index peuplé.
-          app = Application.objects.create(name='ci-recherche')
-          auth = AuthenticationMethod.objects.create(name='ci-authent', slug='ci-authent')
-          Deployment.objects.create(
-              application=app,
-              environment=Environment.objects.first(),
-              access_url='https://ci-deploiement.invalid',
-          )
-          for modele in (Application, Deployment, AuthenticationMethod):
-              search_backend.cache(modele.objects.all())
-
-          for terme, attendu in (
-              (app.application_id, Application),
-              ('ci-recherche', Application),
-              ('ci-authent', AuthenticationMethod),
-              ('ci-deploiement', Deployment),
-          ):
-              trouves = [type(r.object) for r in search_backend.search(terme)]
-              if attendu not in trouves:
-                  echecs.append(f'« {terme} » : {attendu.__name__} absent des résultats ({trouves})')
-
-          if echecs:
-              raise SystemExit('ECHEC\n' + '\n'.join(echecs))
-          print('Recherche globale : 12 index déclarés, 4 recherches concluantes.')
-          "
-
-      # C'EST LE CONTRÔLE QUI COMPTE. Rendre un gabarit isolément ne prouve
-      # rien : la version 0.4.0 avait dix pages en erreur 500 alors que ses
-      # gabarits se rendaient. On parcourt donc TOUTES les pages du plugin
-      # comme le ferait un navigateur, vues et routage compris.
-      - name: Parcourir toutes les pages du plugin
-        run: |
-          docker run --rm --network host \
-            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
-            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
-            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
-            netbox-plugin-test \
-            /opt/netbox/netbox/manage.py shell -c "
-          from django.test import Client
-          from django.urls import reverse
-          from django.contrib.auth import get_user_model
-          from netbox_applications.models import (
-              Application, Deployment, REFERENCES, Environment,
-          )
-
-          U = get_user_model()
-          user = U.objects.filter(username='ci').first() or U.objects.create_superuser(
-              'ci', 'ci@example.invalid', 'x'
-          )
-
-          # Une valeur dans chaque référentiel : une page de fiche ne se teste
-          # pas sans objet à afficher.
-          #
-          # « get_or_create » et des noms propres à CETTE étape : toutes les
-          # étapes de ce job partagent la MÊME base. Supposer qu'elle est vierge
-          # faisait échouer l'étape sur une collision de nom avec les fixtures
-          # de l'étape précédente — pas sur un défaut du plugin.
-          for modele in REFERENCES:
-              modele.objects.get_or_create(slug='ci-pages', defaults={'name': 'ci-pages'})
-          app, _ = Application.objects.get_or_create(name='ci-pages-app')
-          Deployment.objects.get_or_create(
-              application=app, environment=Environment.objects.first()
-          )
-
-          c = Client(raise_request_exception=False)
-          c.force_login(user)
-
-          pages = []
-          for modele in (*REFERENCES, Application, Deployment):
-              nom = modele._meta.model_name
-              pages.append(reverse(f'plugins:netbox_applications:{nom}_list'))
-              pages.append(reverse(f'plugins:netbox_applications:{nom}_add'))
-              objet = modele.objects.first()
-              pages.append(objet.get_absolute_url())
-              pages.append(objet.get_absolute_url() + 'edit/')
-
-          PARASITES = ('functools.partial', '{#', '#}', '{{', '{%')
-          echecs = []
-          for url in pages:
-              r = c.get(url)
-              if r.status_code not in (200, 302):
-                  echecs.append(f'{url} -> HTTP {r.status_code}')
-                  continue
-              if r.status_code == 200:
-                  html = r.content.decode()
-                  for motif in PARASITES:
-                      if motif in html:
-                          echecs.append(f'{url} : « {motif} » présent dans le rendu')
-          if echecs:
-              raise SystemExit('ECHEC\n' + '\n'.join(echecs))
-          print(f'{len(pages)} pages parcourues, toutes rendues sans texte parasite.')
-          "
+            netbox-plugin-test sh -c '
+              coverage run --source=netbox_applications --omit="*/migrations/*,*/tests/*" \
+                /opt/netbox/netbox/manage.py test netbox_applications --verbosity 2 &&
+              coverage report --precision=1 --fail-under=95
+            '
