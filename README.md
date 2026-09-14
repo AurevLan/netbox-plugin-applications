@@ -208,6 +208,8 @@ l'interface.
 | Le menu n'apparaît pas | `PLUGINS` absent de `configuration/extra.py`, ou fichier non monté |
 | `relation "netbox_applications_..." does not exist` | l'image a été construite sans le plugin, ou le conteneur tourne sur une image antérieure — reconstruire puis `up -d` |
 | Les tâches en arrière-plan échouent | `netbox-worker` n'utilise pas la même image que `netbox` |
+| **La recherche ne trouve rien** | index jamais peuplé — lancer `manage.py reindex netbox_applications` |
+| **La recherche ne reflète pas les modifications** | `netbox-worker` sans le plugin : il traite la tâche d'indexation sans savoir indexer ces objets, **et sans erreur** |
 | Démarrage déclaré `unhealthy` | `start_period` trop court sur une machine lente |
 | Le plugin **recule de version** sans erreur | une valeur de repli sur `PLUGIN_VERSION` (`${PLUGIN_VERSION:-v0.1.0}`) : la variable manquante fait construire une version ancienne, sous le nom d'image attendu. Préférer `${PLUGIN_VERSION:?}`, qui **arrête** la commande |
 
@@ -260,6 +262,29 @@ Menu **Applications**, en deux groupes :
 - **Référentiels** — les dix listes de valeurs, qu'on modifie rarement.
 
 La fiche d'une application porte un onglet **Déploiements** dont le badge affiche leur nombre.
+
+### Recherche globale
+
+Les objets du plugin sont indexés : `APP-0001`, `Keycloak`, ou l'URL d'accès d'un déploiement
+répondent depuis la barre de recherche de NetBox. Les résultats sont groupés sous deux
+catégories, *Applications* et *Applications — référentiels*.
+
+**L'identifiant passe devant le nom** : qui cherche `APP-0001` cherche cette fiche-là.
+
+> ⚠️ **À la première installation de la version 0.6.0, lancer un réindexage.** Déclarer un index
+> ne remplit pas la table : les objets déjà en base ne sont indexés qu'à leur prochaine
+> écriture. Sans cette commande, la recherche reste muette alors que tout semble en place.
+>
+> ```bash
+> python manage.py reindex netbox_applications
+> ```
+>
+> Avec `netbox-docker` : `docker compose exec netbox /opt/netbox/netbox/manage.py reindex netbox_applications`
+
+> ⚠️ **Le worker DOIT porter le plugin.** L'indexation est confiée à une tâche de fond. Un
+> `netbox-worker` construit sur une image sans le plugin **n'indexe jamais rien**, sans la
+> moindre erreur : la recherche cesse simplement de refléter les modifications. C'est la même
+> image pour les deux services, sans exception.
 
 ### API
 

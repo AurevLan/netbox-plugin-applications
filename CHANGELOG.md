@@ -3,7 +3,25 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.6.0] — 2026-09-14
+
+### Ajouté — la recherche globale voit enfin le plugin
+
+`APP-0001` et `Keycloak` ne renvoyaient **aucun résultat**. Pour une CMDB, la barre de recherche
+est la première porte d'entrée : on tape un identifiant, pas un chemin de menu.
+
+- Les **douze modèles** sont indexés, groupés en deux catégories : *Applications* et
+  *Applications — référentiels*.
+- **L'identifiant applicatif passe devant le nom** — le poids d'un champ se lit à l'envers, plus
+  il est faible plus le champ est jugé pertinent. Qui cherche `APP-0001` cherche cette fiche-là.
+- Un déploiement se retrouve par son **URL d'accès** : c'est ce qu'on a en main quand on tombe
+  sur une adresse sans savoir ce qu'elle sert.
+- Cycle complet vérifié : création, modification et suppression se répercutent dans l'index.
+
+> **Deux points d'exploitation, documentés dans le README** : un réindexage est nécessaire à la
+> mise à jour, et le `netbox-worker` doit porter le plugin — sinon l'indexation ne se fait
+> jamais, sans erreur.
+
 
 ### Corrigé — la documentation décrivait un plugin qui n'existe plus
 

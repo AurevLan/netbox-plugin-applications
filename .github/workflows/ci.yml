@@ -202,6 +202,58 @@ jobs:
           print('Garde-fous éprouvés : 5 cas, tous conformes.')
           "
 
+      # Déclarer un index ne remplit pas la table, et l'indexation passe par une
+      # tâche de fond : la recherche peut rester muette alors que tout semble en
+      # place. Seule une recherche réelle le montre.
+      - name: Vérifier que la recherche globale trouve les objets
+        run: |
+          docker run --rm --network host \
+            -e DB_HOST=localhost -e DB_NAME=netbox -e DB_USER=netbox -e DB_PASSWORD=netbox \
+            -e REDIS_HOST=localhost -e REDIS_PASSWORD= \
+            -e SECRET_KEY=cle-de-test-suffisamment-longue-pour-netbox-0123456789 \
+            netbox-plugin-test \
+            /opt/netbox/netbox/manage.py shell -c "
+          from netbox.search import get_indexer
+          from netbox.search.backends import search_backend
+          from netbox_applications.models import (
+              Application, AuthenticationMethod, Deployment, Environment, REFERENCES,
+          )
+
+          echecs = []
+
+          # 1. Chaque modèle a bien un index.
+          for modele in (Application, Deployment, *REFERENCES):
+              try:
+                  get_indexer(modele)
+              except KeyError:
+                  echecs.append(f'{modele.__name__} : aucun index de recherche')
+
+          # 2. La recherche trouve réellement, une fois l index peuplé.
+          app = Application.objects.create(name='ci-recherche')
+          auth = AuthenticationMethod.objects.create(name='ci-authent', slug='ci-authent')
+          Deployment.objects.create(
+              application=app,
+              environment=Environment.objects.first(),
+              access_url='https://ci-deploiement.invalid',
+          )
+          for modele in (Application, Deployment, AuthenticationMethod):
+              search_backend.cache(modele.objects.all())
+
+          for terme, attendu in (
+              (app.application_id, Application),
+              ('ci-recherche', Application),
+              ('ci-authent', AuthenticationMethod),
+              ('ci-deploiement', Deployment),
+          ):
+              trouves = [type(r.object) for r in search_backend.search(terme)]
+              if attendu not in trouves:
+                  echecs.append(f'« {terme} » : {attendu.__name__} absent des résultats ({trouves})')
+
+          if echecs:
+              raise SystemExit('ECHEC\n' + '\n'.join(echecs))
+          print('Recherche globale : 12 index déclarés, 4 recherches concluantes.')
+          "
+
       # C'EST LE CONTRÔLE QUI COMPTE. Rendre un gabarit isolément ne prouve
       # rien : la version 0.4.0 avait dix pages en erreur 500 alors que ses
       # gabarits se rendaient. On parcourt donc TOUTES les pages du plugin
