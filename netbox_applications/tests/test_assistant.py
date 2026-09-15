@@ -128,3 +128,30 @@ class AssistantTest(TestCase):
         html = self.client.get(reverse("plugins:netbox_applications:application_list")).content.decode()
         self.assertIn("Déclarer une application", html)
         self.assertIn(reverse("plugins:netbox_applications:assistant"), html)
+
+    def test_the_pages_carry_somewhere_for_the_modal_to_appear(self):
+        """Un bouton sans conteneur de modale est INERTE.
+
+        HTMX va chercher le contenu, ne trouve pas où le déposer, et rien ne
+        s'affiche — sans la moindre erreur. C'est le défaut qui a fait croire
+        que l'assistant n'existait pas : les tests vérifiaient la présence du
+        bouton, jamais que la fenêtre pouvait s'ouvrir.
+        """
+        for nom in ("demarrer", "application_list"):
+            html = self.client.get(reverse(f"plugins:netbox_applications:{nom}")).content.decode()
+            with self.subTest(page=nom):
+                self.assertIn('id="htmx-modal"', html)
+                self.assertIn('id="htmx-modal-content"', html)
+
+    def test_opening_the_start_page_opens_the_wizard(self):
+        """« Démarrer » doit ouvrir l'assistant, pas seulement y mener."""
+        html = self.client.get(reverse("plugins:netbox_applications:demarrer")).content.decode()
+        self.assertIn("ouvrir-assistant", html)
+        self.assertIn("DOMContentLoaded", html)
+        self.assertIn(reverse("plugins:netbox_applications:assistant"), html)
+
+    def test_the_start_page_can_be_opened_without_the_wizard(self):
+        """Revenir consulter l'état ne doit pas imposer la fenêtre."""
+        reponse = self.client.get(reverse("plugins:netbox_applications:demarrer"), {"sans-assistant": "1"})
+        self.assertEqual(reponse.status_code, 200)
+        self.assertIn("sans-assistant", reponse.content.decode())

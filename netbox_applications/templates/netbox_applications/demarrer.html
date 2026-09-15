@@ -3,6 +3,27 @@
 {% block title %}Démarrer avec le catalogue applicatif{% endblock %}
 
 {% block content %}
+{% comment %}
+  Ouverture immédiate de l'assistant : on arrive ici pour déclarer une
+  application, pas pour lire. Le lien est cliqué par script plutôt que
+  d'appeler Bootstrap directement — c'est EXACTEMENT le chemin qu'emprunte un
+  clic humain, donc celui qui est déjà éprouvé.
+
+  « {# … #} » ne commente QU'UNE LIGNE chez Django : au-delà, le texte
+  s'affiche tel quel dans la page. Ce défaut a déjà été livré une fois ici.
+{% endcomment %}
+<a href="#" id="ouvrir-assistant" class="d-none"
+   hx-get="{% url 'plugins:netbox_applications:assistant' %}"
+   hx-target="#htmx-modal-content"
+   data-bs-toggle="modal"
+   data-bs-target="#htmx-modal">assistant</a>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (new URLSearchParams(window.location.search).has('sans-assistant')) return;
+    document.getElementById('ouvrir-assistant').click();
+  });
+</script>
+
 <div class="row mb-4">
   <div class="col">
     <h1 class="h2">Créer une fiche applicative</h1>
@@ -114,8 +135,16 @@
                 Ne renseignez que ce que vous savez : tout est facultatif sauf le nom.
                 L'identifiant <code>APP-0001</code> est attribué automatiquement.
               </p>
-              <a href="{% url 'plugins:netbox_applications:application_add' %}" class="btn btn-sm btn-primary">
-                Créer une application
+              <a href="#" class="btn btn-sm btn-primary"
+                 hx-get="{% url 'plugins:netbox_applications:assistant' %}"
+                 hx-target="#htmx-modal-content"
+                 data-bs-toggle="modal"
+                 data-bs-target="#htmx-modal">
+                Déclarer une application
+              </a>
+              <a href="{% url 'plugins:netbox_applications:application_add' %}"
+                 class="btn btn-sm btn-outline-secondary">
+                Formulaire complet
               </a>
 
             {% elif etape.numero == 3 %}
@@ -217,3 +246,7 @@
   </div>
 </div>
 {% endblock %}
+
+{% block modals %}
+  {% include 'inc/htmx_modal.html' %}
+{% endblock modals %}

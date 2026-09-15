@@ -3,6 +3,25 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.10.1] — 2026-09-15
+
+### Corrigé — l'assistant ne pouvait pas s'ouvrir
+
+- **Le conteneur de modale n'existait sur aucune des deux pages.** Le bouton était bien affiché,
+  HTMX allait bien chercher le contenu — puis ne trouvait pas où le déposer. **Aucune fenêtre,
+  aucune erreur.** Les pages du plugin portent désormais `inc/htmx_modal.html`.
+- **« Démarrer » ouvre l'assistant** au lieu de simplement y mener. `?sans-assistant=1` permet de
+  consulter l'état sans la fenêtre.
+- L'étape 2 de la page « Démarrer » mène à l'assistant ; le formulaire complet reste offert à
+  côté.
+
+> **Mes tests vérifiaient la présence du bouton, jamais que la fenêtre pouvait s'ouvrir.** Un
+> test contrôle maintenant que le conteneur est là — sans lui, le bouton est inerte.
+
+> **Un commentaire `{# … #}` sur plusieurs lignes n'est pas un commentaire chez Django** : le
+> texte s'affiche dans la page. Défaut déjà livré une fois par ce plugin, reproduit ici, et
+> attrapé cette fois par le contrôle écrit à l'époque.
+
 ## [0.10.0] — 2026-09-15
 
 ### Ajouté — un assistant de déclaration, en modale

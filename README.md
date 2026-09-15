@@ -115,7 +115,7 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 
 | Contrôle | Portée mesurée | Ce qu'il attrape |
 |---|---|---|
-| **Tests** | **63 tests**, couverture **98,4 %** | les règles du modèle et l'atteignabilité des pages |
+| **Tests** | **66 tests**, couverture **98,4 %** | les règles du modèle et l'atteignabilité des pages |
 | **Parcours des pages** | **48 pages** — liste, création, fiche et édition des 12 modèles | une vue en erreur 500, du texte de gabarit fuitant dans le HTML |
 | **Règles métier** | **3 règles**, éprouvées dans les deux sens | un garde-fou muet, ou trop large |
 | **Recherche globale** | **12 index**, 5 recherches | des objets invisibles depuis la barre de recherche |
@@ -340,8 +340,9 @@ echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin
 
 ### Déclarer une application
 
-Le bouton **« Déclarer une application »**, sur la liste des applications, ouvre un
-**remplissage guidé en quatre temps** :
+**Applications → Démarrer** ouvre directement l'assistant. Le même bouton
+**« Déclarer une application »** figure sur la liste des applications. Dans les deux cas, une
+fenêtre s'ouvre au premier plan pour un **remplissage guidé en quatre temps** :
 
 | Étape | Ce qu'on demande, et pourquoi |
 |---|---|

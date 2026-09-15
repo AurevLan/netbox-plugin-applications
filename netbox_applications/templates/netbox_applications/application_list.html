@@ -1,0 +1,12 @@
+{% extends 'generic/object_list.html' %}
+
+{% comment %}
+  Le gabarit amont réserve « modals » au formulaire de colonnes. Sans ce bloc,
+  le conteneur #htmx-modal n'existe pas sur la page et le bouton « Déclarer une
+  application » reste INERTE : HTMX va chercher le contenu, puis ne trouve pas
+  où le déposer. Aucune erreur, aucune fenêtre.
+{% endcomment %}
+{% block modals %}
+  {{ block.super }}
+  {% include 'inc/htmx_modal.html' %}
+{% endblock modals %}

@@ -322,6 +322,9 @@ class ApplicationListView(generic.ObjectListView):
     table = tables.ApplicationTable
     filterset = filtersets.ApplicationFilterSet
     filterset_form = forms.ApplicationFilterForm
+    # Gabarit propre au plugin : il ajoute le conteneur de modale, que le
+    # gabarit amont n'inclut pas sur les pages de liste.
+    template_name = "netbox_applications/application_list.html"
     # L'assistant DEVANT le bouton ordinaire : c'est le chemin recommandé, et
     # le formulaire complet reste accessible à qui sait ce qu'il fait.
     actions = (
