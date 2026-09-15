@@ -115,7 +115,7 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 
 | Contrôle | Portée mesurée | Ce qu'il attrape |
 |---|---|---|
-| **Tests** | **51 tests**, couverture **98,3 %** | les règles du modèle et l'atteignabilité des pages |
+| **Tests** | **53 tests**, couverture **98,3 %** | les règles du modèle et l'atteignabilité des pages |
 | **Parcours des pages** | **48 pages** — liste, création, fiche et édition des 12 modèles | une vue en erreur 500, du texte de gabarit fuitant dans le HTML |
 | **Règles métier** | **3 règles**, éprouvées dans les deux sens | un garde-fou muet, ou trop large |
 | **Recherche globale** | **12 index**, 5 recherches | des objets invisibles depuis la barre de recherche |
@@ -345,7 +345,8 @@ une minute, puis **regarde l'état réel de votre catalogue** :
 
 - combien d'applications, de déploiements, de valeurs de référentiel ;
 - **quelles applications n'ont encore aucun déploiement** ;
-- **quels déploiements ne sont rattachés à aucune machine**.
+- **quels déploiements ne sont rattachés à aucune machine** ;
+- **quelles machines ne servent aucun déploiement** — le même oubli, vu de l'autre bout.
 
 C'est ce dernier point qui le rend utile bien après la première prise en main : la page est une
 liste de ce qui est resté à moitié fait. Elle rappelle aussi ce que veulent dire RTO, RPO,

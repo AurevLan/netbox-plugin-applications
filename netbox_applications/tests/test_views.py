@@ -168,6 +168,31 @@ class ParcoursGuideTest(TestCase):
         if debut is not None:
             self.assertNotIn("complète", html[debut : debut + 600])
 
+    def test_it_names_a_machine_attached_to_nothing(self):
+        """Le manque doit se voir des deux côtés (ADR-0018)."""
+        from virtualization.models import Cluster, ClusterType, VirtualMachine
+
+        type_grappe = ClusterType.objects.create(name="orpheline", slug="orpheline")
+        grappe = Cluster.objects.create(name="grappe orpheline", type=type_grappe)
+        machine = VirtualMachine.objects.create(name="vm-sans-emploi", cluster=grappe)
+        html = self.client.get(self.url).content.decode()
+        self.assertIn("vm-sans-emploi", html)
+        self.assertIn(machine.get_absolute_url(), html)
+
+    def test_an_attached_machine_is_not_flagged(self):
+        from virtualization.models import Cluster, ClusterType, VirtualMachine
+
+        type_grappe = ClusterType.objects.create(name="employée", slug="employee")
+        grappe = Cluster.objects.create(name="grappe employée", type=type_grappe)
+        machine = VirtualMachine.objects.create(name="vm-au-travail", cluster=grappe)
+        deploiement = Deployment.objects.create(
+            application=Application.objects.create(name="avec machine"),
+            environment=Environment.objects.first(),
+        )
+        deploiement.virtual_machines.add(machine)
+        html = self.client.get(self.url).content.decode()
+        self.assertNotIn("vm-au-travail", html)
+
     def test_the_counts_match_the_database(self):
         Application.objects.create(name="comptée")
         html = self.client.get(self.url).content.decode()

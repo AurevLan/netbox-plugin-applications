@@ -148,6 +148,18 @@
                   {% endfor %}
                 </div>
               {% endif %}
+              {% if machines_orphelines %}
+                <div class="alert alert-warning py-2 mb-2">
+                  <strong>Machines rattachées à aucun déploiement :</strong>
+                  {% for machine in machines_orphelines %}
+                    <a href="{{ machine.get_absolute_url }}">{{ machine }}</a>{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                  <div class="small mt-1">
+                    Le même oubli, vu de l'autre bout : ces machines existent sans qu'on sache
+                    ce qu'elles servent.
+                  </div>
+                </div>
+              {% endif %}
             {% endif %}
           </div>
         </div>

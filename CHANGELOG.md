@@ -3,6 +3,18 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.9.2] — 2026-09-15
+
+### Ajouté
+
+- La page **Démarrer** signale désormais les **machines rattachées à aucun déploiement**. Le
+  manque se voit des **deux côtés** : un déploiement sans machine et une machine sans emploi
+  sont le même oubli, et le second ne se voyait nulle part.
+
+> Ce contrôle est la contrepartie d'une décision : le lien machine → déploiement se déclare dans
+> NetBox et nulle part ailleurs — il ne s'observe pas, il ne se déduit pas d'un nom. Son seul
+> vrai défaut est d'être oubliable, et c'est ce contrôle qui le traite.
+
 ## [0.9.1] — 2026-09-14
 
 ### Corrigé

@@ -7,6 +7,7 @@ from netbox.ui import layout
 from netbox.ui.panels import RelatedObjectsPanel
 from netbox.views import generic
 from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view
+from virtualization.models import VirtualMachine
 
 from . import filtersets, forms, models, panels, tables
 
@@ -147,6 +148,10 @@ class DemarrerView(View):
         sans_vm = models.Deployment.objects.annotate(nb_vm=Count("virtual_machines", distinct=True)).filter(
             nb_vm=0
         )
+        # Le manque doit se voir DES DEUX CÔTÉS (ADR-0018). Une machine que
+        # personne n'a rattachée est le même oubli, vu de l'autre bout — et
+        # celui-là ne se voit nulle part ailleurs.
+        machines_orphelines = VirtualMachine.objects.filter(deployments__isnull=True)
 
         etapes = [
             {
@@ -185,6 +190,7 @@ class DemarrerView(View):
                 "nb_referentiels": sum(modele.objects.count() for modele in models.REFERENCES),
                 "sans_deploiement": sans_deploiement,
                 "sans_vm": sans_vm,
+                "machines_orphelines": machines_orphelines,
             },
         )
 
