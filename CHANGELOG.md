@@ -3,6 +3,26 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.10.0] — 2026-09-15
+
+### Ajouté — un assistant de déclaration, en modale
+
+Le bouton **« Déclarer une application »**, sur la liste des applications, ouvre un remplissage
+guidé en quatre temps : l'application, les engagements, la sécurité, **le premier déploiement**.
+
+- Le formulaire complet montrait une vingtaine de champs d'un coup, sans dire lesquels comptaient
+  ni pourquoi. Chaque étape de l'assistant explique son groupe en une phrase.
+- **La dernière étape est la raison d'être de l'assistant** : on ne peut pas en sortir avec une
+  application qui ne tourne nulle part. C'est l'oubli le plus fréquent, que la page « Démarrer »
+  ne faisait que constater après coup.
+- **Une seule transaction.** Un refus du modèle à la dernière étape n'écrit rien — sans cela, il
+  laisserait précisément l'application orpheline que l'assistant existe pour éviter.
+- L'état vit dans la **session**, pas dans des champs cachés : rien d'incomplet n'atteint la base.
+- Le formulaire complet reste accessible par le bouton **Add**.
+
+10 tests couvrent l'assistant, dont la vérification qu'un refus en fin de parcours ne laisse
+**aucune** trace en base.
+
 ## [0.9.2] — 2026-09-15
 
 ### Ajouté

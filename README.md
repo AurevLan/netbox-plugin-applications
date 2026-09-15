@@ -3,7 +3,7 @@
 [![Contrôles](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml)
 [![Scorecard OpenSSF](https://api.scorecard.dev/projects/github.com/AurevLan/netbox-plugin-applications/badge)](https://scorecard.dev/viewer/?uri=github.com/AurevLan/netbox-plugin-applications)
-[![Couverture](https://img.shields.io/badge/couverture-98.3%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
+[![Couverture](https://img.shields.io/badge/couverture-98.4%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![NetBox](https://img.shields.io/badge/NetBox-%E2%89%A5%204.7.0-blue)](https://netbox.dev)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
@@ -115,7 +115,7 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 
 | Contrôle | Portée mesurée | Ce qu'il attrape |
 |---|---|---|
-| **Tests** | **53 tests**, couverture **98,3 %** | les règles du modèle et l'atteignabilité des pages |
+| **Tests** | **63 tests**, couverture **98,4 %** | les règles du modèle et l'atteignabilité des pages |
 | **Parcours des pages** | **48 pages** — liste, création, fiche et édition des 12 modèles | une vue en erreur 500, du texte de gabarit fuitant dans le HTML |
 | **Règles métier** | **3 règles**, éprouvées dans les deux sens | un garde-fou muet, ou trop large |
 | **Recherche globale** | **12 index**, 5 recherches | des objets invisibles depuis la barre de recherche |
@@ -337,6 +337,25 @@ echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin
 ---
 
 ## Utilisation
+
+### Déclarer une application
+
+Le bouton **« Déclarer une application »**, sur la liste des applications, ouvre un
+**remplissage guidé en quatre temps** :
+
+| Étape | Ce qu'on demande, et pourquoi |
+|---|---|
+| **1. L'application** | nom, client, contact métier — ce qui identifie le service |
+| **2. Les engagements** | criticité, RTO, RPO, horaires, avec leur sens en une phrase |
+| **3. Sécurité et données** | classification, RGPD, authentification |
+| **4. Le premier déploiement** | **l'étape qui compte** : une application qui ne tourne nulle part ne se surveille pas |
+
+L'application et son premier déploiement sont créés **dans une seule transaction**. Un refus du
+modèle à la dernière étape — l'exposition externe d'une donnée restreinte, par exemple —
+n'écrit **rien** : sans cela, le refus laisserait exactement l'application orpheline que
+l'assistant existe pour éviter.
+
+Le formulaire complet reste accessible par le bouton **Add**, pour qui sait déjà ce qu'il fait.
 
 ### Par où commencer
 

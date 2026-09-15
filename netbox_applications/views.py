@@ -1,15 +1,25 @@
+from django.core.exceptions import ValidationError
 from django.db.models import Count
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.views import View
 
 from extras.ui.panels import CustomFieldsPanel, TagsPanel
+from netbox.object_actions import (
+    AddObject,
+    BulkDelete,
+    BulkEdit,
+    BulkExport,
+    BulkImport,
+    ObjectAction,
+)
 from netbox.ui import layout
 from netbox.ui.panels import RelatedObjectsPanel
 from netbox.views import generic
 from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view
 from virtualization.models import VirtualMachine
 
-from . import filtersets, forms, models, panels, tables
+from . import assistant, filtersets, forms, models, panels, tables
 
 # --- Référentiels --------------------------------------------------------------
 #
@@ -195,6 +205,91 @@ class DemarrerView(View):
         )
 
 
+class DeclarerAvecAssistant(ObjectAction):
+    """Bouton « Déclarer une application » sur la liste des applications.
+
+    Une ObjectAction plutôt qu'un gabarit surchargé : le bouton se place là où
+    NetBox place les siens, et disparaît pour qui n'a pas le droit de créer.
+    """
+
+    name = "assistant"
+    label = "Déclarer une application"
+    permissions_required = {"add"}
+    template_name = "netbox_applications/buttons/assistant.html"
+
+    @classmethod
+    def get_url(cls, obj):
+        # L'URL est fixe : l'assistant ne porte pas sur un objet existant.
+        return None
+
+
+class AssistantView(View):
+    """Les quatre étapes de l'assistant, dans la modale de NetBox.
+
+    Une seule vue pour toutes les étapes : le numéro d'étape est porté par
+    l'URL, l'état par la session. Chaque réponse est un FRAGMENT de modale,
+    échangé par HTMX — jamais une page entière.
+    """
+
+    gabarit = "netbox_applications/assistant.html"
+
+    def _session(self, request):
+        return request.session.setdefault(assistant.CLE_SESSION, {})
+
+    def _rendu(self, request, etape, form, **extra):
+        return render(
+            request,
+            self.gabarit,
+            {
+                "form": form,
+                "etape": etape,
+                "numero": etape + 1,
+                "total": len(assistant.ETAPES),
+                "titre": form.titre,
+                "explication": form.explication,
+                "derniere": etape == len(assistant.ETAPES) - 1,
+                **extra,
+            },
+        )
+
+    def get(self, request, etape=0):
+        if etape == 0:
+            # Toute ouverture repart d'une feuille blanche : reprendre une
+            # saisie abandonnée sans le dire serait déroutant.
+            request.session.pop(assistant.CLE_SESSION, None)
+        donnees = self._session(request)
+        form = assistant.ETAPES[etape](initial=donnees)
+        return self._rendu(request, etape, form)
+
+    def post(self, request, etape=0):
+        form = assistant.ETAPES[etape](request.POST)
+        if not form.is_valid():
+            return self._rendu(request, etape, form)
+
+        donnees = self._session(request)
+        donnees.update(assistant._valeurs_brutes(form))
+        request.session.modified = True
+
+        if etape < len(assistant.ETAPES) - 1:
+            suivante = assistant.ETAPES[etape + 1](initial=donnees)
+            return self._rendu(request, etape + 1, suivante)
+
+        try:
+            application = assistant.creer(donnees)
+        except ValidationError as erreur:
+            # Un refus du modèle — par exemple l'exposition externe d'une donnée
+            # restreinte — se rapporte à la dernière étape, où il se corrige.
+            for champ, messages in erreur.message_dict.items():
+                form.add_error(champ if champ in form.fields else None, messages)
+            return self._rendu(request, etape, form)
+
+        request.session.pop(assistant.CLE_SESSION, None)
+        # HX-Redirect : la modale se referme et le navigateur va sur la fiche.
+        reponse = HttpResponse(status=204)
+        reponse["HX-Redirect"] = application.get_absolute_url()
+        return reponse
+
+
 # --- Application ---------------------------------------------------------------
 
 
@@ -227,6 +322,16 @@ class ApplicationListView(generic.ObjectListView):
     table = tables.ApplicationTable
     filterset = filtersets.ApplicationFilterSet
     filterset_form = forms.ApplicationFilterForm
+    # L'assistant DEVANT le bouton ordinaire : c'est le chemin recommandé, et
+    # le formulaire complet reste accessible à qui sait ce qu'il fait.
+    actions = (
+        DeclarerAvecAssistant,
+        AddObject,
+        BulkImport,
+        BulkExport,
+        BulkEdit,
+        BulkDelete,
+    )
 
 
 class ApplicationEditView(generic.ObjectEditView):
