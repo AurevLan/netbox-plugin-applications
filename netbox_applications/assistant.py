@@ -35,6 +35,7 @@ from .models import (
     LifecycleStatus,
     MaintenanceWindow,
     ServiceHours,
+    VirtualServer,
 )
 
 CLE_SESSION = "netbox_applications_assistant"
@@ -154,7 +155,8 @@ class EtapeDeploiement(_EtapeForm):
     explication = (
         "Une application qui ne tourne nulle part ne se surveille pas et ne se retrouve "
         "pas en incident. Déclarez au moins l'environnement où elle existe aujourd'hui ; "
-        "les autres s'ajouteront ensuite."
+        "les autres s'ajouteront ensuite. La protection réseau se déclare ici, car elle "
+        "diffère souvent d'un environnement à l'autre."
     )
 
     environment = forms.ModelChoiceField(
@@ -174,6 +176,17 @@ class EtapeDeploiement(_EtapeForm):
         help_text="Quand une interruption est admise SUR CET ENVIRONNEMENT.",
     )
     external_facing = forms.BooleanField(required=False, label="Diffusé à l'externe")
+    waf_enabled = forms.BooleanField(
+        required=False,
+        label="Protégé par un pare-feu applicatif (WAF)",
+    )
+    waf_virtual_server = forms.ModelChoiceField(
+        queryset=VirtualServer.objects.all(),
+        required=False,
+        label="Serveur virtuel WAF",
+        empty_label="— non renseigné —",
+        help_text="Le point d'entrée par lequel le filtrage s'applique. Facultatif.",
+    )
     access_url = forms.URLField(required=False, label="URL d'accès")
     virtual_machines = forms.ModelMultipleChoiceField(
         queryset=VirtualMachine.objects.all(),
@@ -233,6 +246,8 @@ def creer(donnees):
         maintenance_window_id=donnees.get("maintenance_window"),
         external_facing=donnees.get("external_facing") or False,
         access_url=donnees.get("access_url") or "",
+        waf_enabled=donnees.get("waf_enabled") or False,
+        waf_virtual_server_id=donnees.get("waf_virtual_server"),
     )
     deploiement.full_clean()
     deploiement.save()

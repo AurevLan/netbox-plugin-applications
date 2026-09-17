@@ -15,6 +15,7 @@ from .models import (
     LifecycleStatus,
     MaintenanceWindow,
     ServiceHours,
+    VirtualServer,
 )
 
 # --- Référentiels --------------------------------------------------------------
@@ -214,6 +215,8 @@ class DeploymentTable(NetBoxTable):
     status = columns.ColoredLabelColumn(verbose_name="État")
     maintenance_window = columns.ColoredLabelColumn(verbose_name="Maintenance")
     external_facing = columns.BooleanColumn(verbose_name="Externe")
+    waf_enabled = columns.BooleanColumn(verbose_name="WAF")
+    waf_virtual_server = tables.Column(linkify=True, verbose_name="Serveur virtuel WAF")
     access_url = tables.URLColumn(verbose_name="URL d'accès")
     vm_count = columns.LinkedCountColumn(
         viewname="virtualization:virtualmachine_list",
@@ -232,6 +235,8 @@ class DeploymentTable(NetBoxTable):
             "status",
             "maintenance_window",
             "external_facing",
+            "waf_enabled",
+            "waf_virtual_server",
             "access_url",
             "vm_count",
             "description",
@@ -243,6 +248,8 @@ class DeploymentTable(NetBoxTable):
             "application",
             "environment",
             "status",
+            "external_facing",
+            "waf_enabled",
             "access_url",
             "maintenance_window",
             "external_facing",
@@ -262,3 +269,33 @@ class DeploymentsOnApplicationTable(DeploymentTable):
             "external_facing",
             "vm_count",
         )
+
+
+class VirtualServerTable(NetBoxTable):
+    name = tables.Column(linkify=True, verbose_name="Nom")
+    ip_address = tables.Column(linkify=True, verbose_name="Adresse IP")
+    port = tables.Column(verbose_name="Port")
+    prefix = tables.Column(linkify=True, orderable=False, verbose_name="Préfixe")
+    deployment_count = columns.LinkedCountColumn(
+        viewname="plugins:netbox_applications:deployment_list",
+        url_params={"waf_virtual_server_id": "pk"},
+        verbose_name="Déploiements",
+    )
+    tags = columns.TagColumn(url_name="plugins:netbox_applications:virtualserver_list")
+
+    class Meta(NetBoxTable.Meta):
+        model = VirtualServer
+        fields = (
+            "pk",
+            "id",
+            "name",
+            "ip_address",
+            "port",
+            "prefix",
+            "deployment_count",
+            "description",
+            "tags",
+            "created",
+            "last_updated",
+        )
+        default_columns = ("name", "ip_address", "port", "prefix", "deployment_count", "description")

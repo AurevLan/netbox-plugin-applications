@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from ipam.api.serializers import IPAddressSerializer
 from netbox.api.fields import SerializedPKRelatedField
 from netbox.api.serializers import NetBoxModelSerializer
 from tenancy.api.serializers import ContactSerializer, TenantSerializer
@@ -125,6 +126,31 @@ class ApplicationSerializer(NetBoxModelSerializer):
         brief_fields = ("id", "url", "display", "application_id", "name")
 
 
+class VirtualServerSerializer(NetBoxModelSerializer):
+    url = serializers.HyperlinkedIdentityField(
+        view_name="plugins-api:netbox_applications-api:virtualserver-detail"
+    )
+    ip_address = IPAddressSerializer(nested=True)
+
+    class Meta:
+        model = models.VirtualServer
+        fields = (
+            "id",
+            "url",
+            "display",
+            "name",
+            "ip_address",
+            "port",
+            "description",
+            "comments",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+        )
+        brief_fields = ("id", "url", "display", "name")
+
+
 class DeploymentSerializer(NetBoxModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name="plugins-api:netbox_applications-api:deployment-detail"
@@ -138,6 +164,7 @@ class DeploymentSerializer(NetBoxModelSerializer):
     # refuse l'écriture avec « The .update() method does not support writable
     # nested fields ». Ce champ accepte des identifiants en écriture tout en
     # restituant les objets complets en lecture.
+    waf_virtual_server = VirtualServerSerializer(nested=True, required=False, allow_null=True)
     virtual_machines = SerializedPKRelatedField(
         queryset=VirtualMachine.objects.all(),
         serializer=VirtualMachineSerializer,
@@ -158,6 +185,8 @@ class DeploymentSerializer(NetBoxModelSerializer):
             "maintenance_window",
             "external_facing",
             "access_url",
+            "waf_enabled",
+            "waf_virtual_server",
             "virtual_machines",
             "description",
             "comments",

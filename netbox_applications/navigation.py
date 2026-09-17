@@ -38,6 +38,7 @@ catalogue = (
     ),
     _item("Application", "Applications", "Ajouter une application"),
     _item("Deployment", "Déploiements", "Ajouter un déploiement"),
+    _item("VirtualServer", "Serveurs virtuels", "Ajouter un serveur virtuel"),
 )
 
 # Les libellés sont explicites : « RTO » seul ne dirait rien à qui ouvre le

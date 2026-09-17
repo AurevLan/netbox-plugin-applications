@@ -42,6 +42,26 @@ urlpatterns = [
     # première étape ; c'est elle que porte le bouton.
     path("assistant/", views.AssistantView.as_view(), name="assistant"),
     path("assistant/<int:etape>/", views.AssistantView.as_view(), name="assistant_etape"),
+    # Serveurs virtuels
+    path("virtualserver/", views.VirtualServerListView.as_view(), name="virtualserver_list"),
+    path("virtualserver/add/", views.VirtualServerEditView.as_view(), name="virtualserver_add"),
+    path(
+        "virtualserver/delete/",
+        views.VirtualServerBulkDeleteView.as_view(),
+        name="virtualserver_bulk_delete",
+    ),
+    path("virtualserver/<int:pk>/", views.VirtualServerView.as_view(), name="virtualserver"),
+    path(
+        "virtualserver/<int:pk>/edit/",
+        views.VirtualServerEditView.as_view(),
+        name="virtualserver_edit",
+    ),
+    path(
+        "virtualserver/<int:pk>/delete/",
+        views.VirtualServerDeleteView.as_view(),
+        name="virtualserver_delete",
+    ),
+    path("virtualserver/<int:pk>/", include(get_model_urls("netbox_applications", "virtualserver"))),
     # Applications
     path("applications/", views.ApplicationListView.as_view(), name="application_list"),
     path("applications/add/", views.ApplicationEditView.as_view(), name="application_add"),

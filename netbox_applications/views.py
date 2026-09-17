@@ -377,3 +377,32 @@ class DeploymentDeleteView(generic.ObjectDeleteView):
 class DeploymentBulkDeleteView(generic.BulkDeleteView):
     queryset = models.Deployment.objects.annotate(vm_count=Count("virtual_machines"))
     table = tables.DeploymentTable
+
+
+# --- Serveur virtuel -------------------------------------------------------------
+
+
+@register_model_view(models.VirtualServer)
+class VirtualServerView(generic.ObjectView):
+    queryset = models.VirtualServer.objects.all()
+
+
+class VirtualServerListView(generic.ObjectListView):
+    queryset = models.VirtualServer.objects.annotate(deployment_count=Count("deployments", distinct=True))
+    table = tables.VirtualServerTable
+    filterset = filtersets.VirtualServerFilterSet
+    filterset_form = forms.VirtualServerFilterForm
+
+
+class VirtualServerEditView(generic.ObjectEditView):
+    queryset = models.VirtualServer.objects.all()
+    form = forms.VirtualServerForm
+
+
+class VirtualServerDeleteView(generic.ObjectDeleteView):
+    queryset = models.VirtualServer.objects.all()
+
+
+class VirtualServerBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.VirtualServer.objects.annotate(deployment_count=Count("deployments", distinct=True))
+    table = tables.VirtualServerTable

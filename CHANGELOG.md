@@ -3,6 +3,43 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.11.0] — 2026-09-17
+
+### Ajouté — pare-feu applicatif et serveur virtuel
+
+**Sur le déploiement**, donc par environnement : la production est souvent protégée quand la
+recette ne l'est pas, et c'est cet écart qu'on veut constater.
+
+- **WAF activé** — un pare-feu applicatif filtre-t-il cette instance ?
+- **Serveur virtuel WAF** — le point d'entrée par lequel le filtrage s'applique. **Facultatif**,
+  et proposé au chef de projet dès l'assistant de déclaration.
+- **Nouveau modèle `VirtualServer`** : un nom, une **adresse IP** (`ipam.IPAddress`) et un port.
+  Le même serveur virtuel sert souvent plusieurs déploiements, et c'est son adresse qui compte en
+  incident — un nom saisi dans chaque fiche ne répond à rien et diverge à la première faute de
+  frappe. Pages, API, recherche et menu compris.
+- **Le préfixe n'est pas stocké** : NetBox sait déjà quel préfixe contient une adresse. Le
+  dupliquer créerait une seconde vérité, fausse dès le premier redécoupage. Il est calculé, et
+  c'est le plus spécifique qui est retenu.
+
+### La question qui justifie le champ
+
+```
+/deployments/?expose_sans_waf=true
+```
+
+« Qu'est-ce qui est exposé à l'externe sans filtrage ? » croise deux champs — aucun filtre
+simple ne la pose.
+
+### Règles
+
+- **Désigner un serveur virtuel alors que le WAF est déclaré inactif est refusé** : la fiche
+  nommerait le moyen d'un filtrage qui n'a pas lieu. Les deux issues sont indiquées.
+- Le WAF peut être activé **sans** serveur virtuel : on peut savoir qu'on est protégé sans savoir
+  encore par quoi.
+- Une adresse IP ou un serveur virtuel **employés ne peuvent pas être supprimés**.
+
+17 tests couvrent l'ensemble.
+
 ## [0.10.1] — 2026-09-15
 
 ### Corrigé — l'assistant ne pouvait pas s'ouvrir

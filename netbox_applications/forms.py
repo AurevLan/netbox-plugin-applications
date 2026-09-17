@@ -1,5 +1,6 @@
 from django import forms
 
+from ipam.models import IPAddress
 from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
 from tenancy.models import Contact, Tenant
 from utilities.forms.fields import (
@@ -24,6 +25,7 @@ from .models import (
     LifecycleStatus,
     MaintenanceWindow,
     ServiceHours,
+    VirtualServer,
 )
 
 # --- Référentiels --------------------------------------------------------------
@@ -289,6 +291,7 @@ class DeploymentForm(NetBoxModelForm):
     fieldsets = (
         FieldSet("application", "environment", "status", "description", name="Identité"),
         FieldSet("maintenance_window", "external_facing", "access_url", name="Exploitation"),
+        FieldSet("waf_enabled", "waf_virtual_server", name="Pare-feu applicatif"),
         FieldSet("virtual_machines", name="Ressources"),
         FieldSet("tags", name="Divers"),
     )
@@ -303,6 +306,8 @@ class DeploymentForm(NetBoxModelForm):
             "maintenance_window",
             "external_facing",
             "access_url",
+            "waf_enabled",
+            "waf_virtual_server",
             "virtual_machines",
             "comments",
             "tags",
@@ -315,6 +320,7 @@ class DeploymentFilterForm(NetBoxModelFilterSetForm):
         FieldSet("q", "filter_id", "tag"),
         FieldSet("application_id", "environment_id", "production", "status_id", name="Identité"),
         FieldSet("maintenance_window_id", "external_facing", name="Exploitation"),
+        FieldSet("waf_enabled", "waf_virtual_server_id", "expose_sans_waf", name="Pare-feu applicatif"),
     )
 
     application_id = DynamicModelMultipleChoiceField(
@@ -332,3 +338,38 @@ class DeploymentFilterForm(NetBoxModelFilterSetForm):
         queryset=MaintenanceWindow.objects.all(), required=False, label="Maintenance"
     )
     external_facing = forms.NullBooleanField(required=False, label="Diffusé à l'externe")
+    waf_enabled = forms.NullBooleanField(required=False, label="WAF activé")
+    waf_virtual_server_id = DynamicModelMultipleChoiceField(
+        queryset=VirtualServer.objects.all(), required=False, label="Serveur virtuel WAF"
+    )
+    # La question qui motive tout ce champ : « qu'est-ce qui est exposé sans
+    # filtrage ? ». Elle croise deux champs, donc aucun filtre simple ne la pose.
+    expose_sans_waf = forms.NullBooleanField(required=False, label="Exposé sans WAF")
+
+
+class VirtualServerForm(NetBoxModelForm):
+    ip_address = DynamicModelChoiceField(queryset=IPAddress.objects.all(), label="Adresse IP")
+    comments = CommentField()
+
+    fieldsets = (
+        FieldSet("name", "description", name="Identité"),
+        FieldSet("ip_address", "port", name="Point d'entrée"),
+        FieldSet("tags", name="Divers"),
+    )
+
+    class Meta:
+        model = VirtualServer
+        fields = ("name", "description", "ip_address", "port", "comments", "tags")
+
+
+class VirtualServerFilterForm(NetBoxModelFilterSetForm):
+    model = VirtualServer
+    fieldsets = (
+        FieldSet("q", "filter_id", "tag"),
+        FieldSet("ip_address_id", "port", name="Point d'entrée"),
+    )
+
+    ip_address_id = DynamicModelMultipleChoiceField(
+        queryset=IPAddress.objects.all(), required=False, label="Adresse IP"
+    )
+    port = forms.IntegerField(required=False, label="Port")

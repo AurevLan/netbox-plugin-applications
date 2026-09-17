@@ -27,6 +27,24 @@
         <tr><th scope="row">Diffusé à l'externe</th><td>{% checkmark object.external_facing %}</td></tr>
       </table>
     </div>
+
+    <div class="card">
+      <h2 class="card-header">Pare-feu applicatif</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">WAF activé</th><td>{% checkmark object.waf_enabled %}</td></tr>
+        <tr><th scope="row">Serveur virtuel</th>
+            <td>{{ object.waf_virtual_server|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Adresse d'écoute</th>
+            <td>{% if object.waf_virtual_server %}{{ object.waf_virtual_server.ip_address|linkify }}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+        <tr><th scope="row">Préfixe</th>
+            <td>{% if object.waf_virtual_server.prefix %}{{ object.waf_virtual_server.prefix|linkify }}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+      </table>
+      {% if object.external_facing and not object.waf_enabled %}
+        <div class="card-footer text-warning">
+          Cette instance est diffusée à l'externe sans pare-feu applicatif déclaré.
+        </div>
+      {% endif %}
+    </div>
   </div>
 
   <div class="col col-md-6">

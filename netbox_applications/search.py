@@ -58,6 +58,19 @@ class DeploymentIndex(SearchIndex):
     display_attrs = ("application", "environment", "status", "access_url")
 
 
+class VirtualServerIndex(SearchIndex):
+    model = models.VirtualServer
+    category = CATALOGUE
+    # On cherche un serveur virtuel par son NOM, mais tout autant par l'adresse
+    # qu'on a sous les yeux quand une alerte tombe.
+    fields = (
+        ("name", 100),
+        ("description", 500),
+        ("comments", 5000),
+    )
+    display_attrs = ("ip_address", "port", "description")
+
+
 def _index_referentiel(modele):
     """Produit l'index d'un référentiel.
 
@@ -85,10 +98,11 @@ def _index_referentiel(modele):
 indexes = [
     ApplicationIndex,
     DeploymentIndex,
+    VirtualServerIndex,
     *[_index_referentiel(modele) for modele in models.REFERENCES],
 ]
 
 # Un « assert » disparaîtrait avec « python -O ». On lève explicitement.
-_attendu = len(models.REFERENCES) + 2
+_attendu = len(models.REFERENCES) + 3
 if len(indexes) != _attendu:
     raise RuntimeError(f"{len(indexes)} index déclarés pour {_attendu} modèles indexables.")

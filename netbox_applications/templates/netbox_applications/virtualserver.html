@@ -1,0 +1,44 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load plugins %}
+
+{% block content %}
+<div class="row">
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Serveur virtuel</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Nom</th><td>{{ object.name }}</td></tr>
+        <tr><th scope="row">Adresse IP</th><td>{{ object.ip_address|linkify }}</td></tr>
+        <tr><th scope="row">Port</th><td>{{ object.port|placeholder }}</td></tr>
+        <tr><th scope="row">Préfixe</th>
+            <td>{% if object.prefix %}{{ object.prefix|linkify }}{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+        <tr><th scope="row">Description</th><td>{{ object.description|placeholder }}</td></tr>
+      </table>
+    </div>
+    {% include 'inc/panels/tags.html' %}
+  </div>
+
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Déploiements protégés</h2>
+      {% if object.deployments.exists %}
+        <table class="table table-hover attr-table">
+          {% for deploiement in object.deployments.all %}
+            <tr>
+              <th scope="row">{{ deploiement.application|linkify }}</th>
+              <td>{{ deploiement|linkify }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class="card-body text-muted">
+          Aucun déploiement ne déclare ce serveur virtuel.
+        </div>
+      {% endif %}
+    </div>
+    {% include 'inc/panels/custom_fields.html' %}
+    {% include 'inc/panels/comments.html' %}
+  </div>
+</div>
+{% endblock %}

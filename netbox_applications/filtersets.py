@@ -1,6 +1,7 @@
 import django_filters
 from django.db.models import Q
 
+from ipam.models import IPAddress
 from netbox.filtersets import NetBoxModelFilterSet
 from tenancy.models import Contact, Tenant
 
@@ -17,6 +18,7 @@ from .models import (
     LifecycleStatus,
     MaintenanceWindow,
     ServiceHours,
+    VirtualServer,
 )
 
 
@@ -130,10 +132,21 @@ class DeploymentFilterSet(NetBoxModelFilterSet):
         queryset=MaintenanceWindow.objects.all(), field_name="maintenance_window"
     )
     production = django_filters.BooleanFilter(field_name="environment__is_production", label="En production")
+    waf_virtual_server_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=VirtualServer.objects.all(), field_name="waf_virtual_server"
+    )
+    # Croise deux champs : aucun filtre simple ne pose cette question, et c'est
+    # pourtant la seule qui justifie de saisir l'information.
+    expose_sans_waf = django_filters.BooleanFilter(
+        method="_expose_sans_waf", label="Exposé à l'externe sans WAF"
+    )
+
+    def _expose_sans_waf(self, queryset, name, value):
+        return queryset.filter(external_facing=True, waf_enabled=not value)
 
     class Meta:
         model = Deployment
-        fields = ("id", "external_facing")
+        fields = ("id", "external_facing", "waf_enabled")
 
     def search(self, queryset, name, value):
         if not value.strip():
@@ -143,3 +156,18 @@ class DeploymentFilterSet(NetBoxModelFilterSet):
             | Q(application__application_id__icontains=value)
             | Q(description__icontains=value)
         )
+
+
+class VirtualServerFilterSet(NetBoxModelFilterSet):
+    ip_address_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=IPAddress.objects.all(), field_name="ip_address"
+    )
+
+    class Meta:
+        model = VirtualServer
+        fields = ("id", "name", "port")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))

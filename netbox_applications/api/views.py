@@ -74,7 +74,19 @@ class ApplicationViewSet(NetBoxModelViewSet):
 
 class DeploymentViewSet(NetBoxModelViewSet):
     queryset = models.Deployment.objects.prefetch_related(
-        "application", "environment", "status", "maintenance_window", "virtual_machines", "tags"
+        "application",
+        "environment",
+        "status",
+        "maintenance_window",
+        "waf_virtual_server",
+        "virtual_machines",
+        "tags",
     )
     serializer_class = serializers.DeploymentSerializer
     filterset_class = filtersets.DeploymentFilterSet
+
+
+class VirtualServerViewSet(NetBoxModelViewSet):
+    queryset = models.VirtualServer.objects.prefetch_related("ip_address", "tags")
+    serializer_class = serializers.VirtualServerSerializer
+    filterset_class = filtersets.VirtualServerFilterSet

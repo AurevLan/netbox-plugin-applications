@@ -239,6 +239,26 @@ class Deployment(NetBoxModel):
         verbose_name="Diffusé à l'externe",
         help_text="Accessible hors du réseau interne. Détermine l'ouverture de flux pare-feu.",
     )
+
+    # --- Pare-feu applicatif (WAF) ---
+    #
+    # Par DÉPLOIEMENT et non par application : la production est souvent
+    # protégée quand la recette ne l'est pas, et c'est précisément cet écart
+    # qu'on veut pouvoir constater.
+    waf_enabled = models.BooleanField(
+        default=False,
+        verbose_name="WAF activé",
+        help_text="Un pare-feu applicatif filtre-t-il le trafic de cette instance ?",
+    )
+    waf_virtual_server = models.ForeignKey(
+        to="netbox_applications.VirtualServer",
+        on_delete=models.PROTECT,
+        related_name="deployments",
+        null=True,
+        blank=True,
+        verbose_name="Serveur virtuel WAF",
+        help_text="Le point d'entrée par lequel le filtrage s'applique.",
+    )
     # Nommé « access_url » et non « url » : NetBox expose un champ « url »
     # hypermedia sur chaque objet. Un champ de modèle portant le même nom
     # obligeait à un contournement dans le sérialiseur.
@@ -293,6 +313,20 @@ class Deployment(NetBoxModel):
                         )
                     }
                 )
+
+        # Un serveur virtuel désigné alors que le WAF est déclaré inactif est
+        # une fiche qui se contredit : elle nomme le moyen d'un filtrage qui
+        # n'a pas lieu. Les deux issues sont indiquées, comme pour les autres
+        # refus du modèle.
+        if self.waf_virtual_server_id and not self.waf_enabled:
+            raise ValidationError(
+                {
+                    "waf_enabled": (
+                        "Un serveur virtuel WAF est désigné alors que le WAF est déclaré "
+                        "inactif. Activer le WAF, ou retirer le serveur virtuel."
+                    )
+                }
+            )
 
         # Cohérence entre les DEUX niveaux. Un service que l'organisation
         # déclare ne plus rendre ne peut pas garder une instance en

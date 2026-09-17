@@ -1,7 +1,8 @@
 """Modèles du catalogue applicatif.
 
-reference.py    les référentiels — listes de valeurs gérées dans l'interface
-application.py  la fiche applicative et ses déploiements
+reference.py      les référentiels — listes de valeurs gérées dans l'interface
+application.py    la fiche applicative et ses déploiements
+virtualserver.py  le point d'entrée réseau devant une instance
 """
 
 from .application import Application, Deployment
@@ -17,6 +18,7 @@ from .reference import (
     MaintenanceWindow,
     ServiceHours,
 )
+from .virtualserver import VirtualServer
 
 __all__ = (
     "RPO",
@@ -31,6 +33,7 @@ __all__ = (
     "LifecycleStatus",
     "MaintenanceWindow",
     "ServiceHours",
+    "VirtualServer",
 )
 
 # Les référentiels, dans l'ordre où ils sont présentés dans le menu.

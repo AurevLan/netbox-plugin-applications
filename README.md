@@ -3,7 +3,7 @@
 [![Contrôles](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml)
 [![Scorecard OpenSSF](https://api.scorecard.dev/projects/github.com/AurevLan/netbox-plugin-applications/badge)](https://scorecard.dev/viewer/?uri=github.com/AurevLan/netbox-plugin-applications)
-[![Couverture](https://img.shields.io/badge/couverture-98.4%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
+[![Couverture](https://img.shields.io/badge/couverture-98.3%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![NetBox](https://img.shields.io/badge/NetBox-%E2%89%A5%204.7.0-blue)](https://netbox.dev)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
@@ -68,6 +68,8 @@ Toutes les valeurs de ces listes s'ajoutent **dans l'interface** — voir
 | Plage de maintenance | quand une interruption est admise **ici** |
 | Diffusé à l'externe | propre à cet environnement |
 | **URL d'accès** | **propre à cet environnement** — la recette n'a pas l'URL de la production |
+| **WAF activé** | un pare-feu applicatif filtre-t-il cette instance ? |
+| **Serveur virtuel WAF** | le point d'entrée par lequel le filtrage s'applique — facultatif |
 | VM | les machines qui portent cette instance |
 
 ### Trois règles impossibles à enfreindre
@@ -98,6 +100,10 @@ aussi faux qu'un contrôle absent.
 - **Cycle de vie du service ≠ état d'instance.** Le premier dit si l'organisation rend encore
   le service, le second si *cette instance-là* tourne. Un service en exploitation peut avoir une
   instance de développement encore planifiée.
+- **Le WAF se déclare par déploiement, pas par application.** La production est souvent protégée
+  quand la recette ne l'est pas, et c'est exactement cet écart qu'on veut pouvoir constater. Le
+  filtre `?expose_sans_waf=true` répond à « qu'est-ce qui est exposé à l'externe sans filtrage ? »
+  — une question qui croise deux champs, donc qu'aucun filtre simple ne pose.
 - **Contact métier ≠ référent technique.** Les deux référents pointent vers l'annuaire de
   contacts de NetBox ; le responsable métier n'y figure que rarement — c'est souvent un
   responsable de service ou une liste de diffusion. Le champ est donc **libre**, mais son
@@ -115,7 +121,7 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 
 | Contrôle | Portée mesurée | Ce qu'il attrape |
 |---|---|---|
-| **Tests** | **66 tests**, couverture **98,4 %** | les règles du modèle et l'atteignabilité des pages |
+| **Tests** | **83 tests**, couverture **98,3 %** | les règles du modèle et l'atteignabilité des pages |
 | **Parcours des pages** | **48 pages** — liste, création, fiche et édition des 12 modèles | une vue en erreur 500, du texte de gabarit fuitant dans le HTML |
 | **Règles métier** | **3 règles**, éprouvées dans les deux sens | un garde-fou muet, ou trop large |
 | **Recherche globale** | **12 index**, 5 recherches | des objets invisibles depuis la barre de recherche |
@@ -542,6 +548,8 @@ Les filtres par valeur attendent un **identifiant**, pas un slug :
 | Lesquelles traitent des données personnelles ? | `?personal_data=true` |
 | Lesquelles relèvent de tel service métier ? | `?business_contact=direction-rh` — recherche **partielle**, par domaine ou par service |
 | Quels déploiements sont exposés à l'externe ? | `/deployments/?external_facing=true` |
+| **Qu'est-ce qui est exposé sans pare-feu applicatif ?** | `/deployments/?expose_sans_waf=true` |
+| Quels déploiements passent par ce serveur virtuel ? | `/deployments/?waf_virtual_server_id=<id>` |
 
 ---
 
