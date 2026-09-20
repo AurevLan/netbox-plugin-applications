@@ -28,7 +28,7 @@ Source = "https://github.com/AurevLan/netbox-plugin-applications"
 
 [project.optional-dependencies]
 dev = [
-    "ruff==0.14.2",
+    "ruff==0.16.8",
     "bandit[toml]==1.8.6",
     "pip-audit==2.9.0",
     "detect-secrets==1.5.0",
