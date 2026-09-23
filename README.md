@@ -4,6 +4,7 @@
 [![CodeQL](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml/badge.svg)](https://github.com/AurevLan/netbox-plugin-applications/actions/workflows/codeql.yml)
 [![Scorecard OpenSSF](https://api.scorecard.dev/projects/github.com/AurevLan/netbox-plugin-applications/badge)](https://scorecard.dev/viewer/?uri=github.com/AurevLan/netbox-plugin-applications)
 [![Couverture](https://img.shields.io/badge/couverture-98.3%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
+[![PyPI](https://img.shields.io/pypi/v/netbox-plugin-applications)](https://pypi.org/project/netbox-plugin-applications/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
 [![NetBox](https://img.shields.io/badge/NetBox-%E2%89%A5%204.7.0-blue)](https://netbox.dev)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
@@ -152,7 +153,7 @@ retirés, et ce qu'on en fait :
 |---|---|---|
 | **Branch-Protection** | 0 | à activer — un réglage du dépôt, pas du code |
 | **Code-Review** | 0 | projet à un seul mainteneur : aucune revue par un tiers n'est possible aujourd'hui |
-| **Packaging** | — | pas de publication PyPI ; l'installation se fait depuis un tag de ce dépôt |
+| **Packaging** | — | publié sur PyPI depuis la 0.11.3 ; la note suivra au prochain relevé |
 | **Signed-Releases** | — | les artefacts ne sont pas signés |
 | **Fuzzing** | 0 | sans objet : le plugin ne traite aucune entrée non fiable, ni format binaire |
 | **Security-Policy** | 4 → | politique enrichie : délais d'engagement, versions suivies |
@@ -167,7 +168,8 @@ interface différente. C'est dit ici plutôt que maquillé.
 
 Dit ici plutôt que découvert à l'usage :
 
-- **Pas de publication PyPI** — l'installation se fait depuis ce dépôt, à un tag figé.
+- **Pas de signature du paquet.** Il est publié par *trusted publishing* — donc sans jeton
+  stocké — mais les artefacts ne sont pas attestés.
 - **Pas de SBOM ni de provenance signée** — le paquet se construit, se vérifie avec `twine`, mais
   n'est pas attesté.
 - **Pas de vérification de types** — NetBox ne publie pas de stubs ; un `mypy` sans eux
@@ -212,22 +214,16 @@ Trois fichiers à créer dans votre copie de `netbox-docker`, puis une commande.
 ARG NETBOX_IMAGE_TAG=v4.7-5.1.1
 FROM netboxcommunity/netbox:${NETBOX_IMAGE_TAG}
 
-ARG PLUGIN_VERSION=v0.5.1
+# Version ÉPINGLÉE, jamais « latest » : une image doit se reconstruire à
+# l'identique dans six mois.
+ARG PLUGIN_VERSION=0.12.0
 
 USER root
 
-# git n'est nécessaire QUE pour l'installation depuis un dépôt, et il est
-# retiré aussitôt : le laisser agrandirait l'image et sa surface d'attaque.
-#
 # « uv pip » et non « pip » : l'image officielle installe ses dépendances avec
 # uv, et un environnement virtuel créé par uv n'embarque PAS pip.
 # « /opt/netbox/venv/bin/pip » échouerait avec un code 127.
-RUN apt-get update \
- && apt-get install -y --no-install-recommends git \
- && uv pip install --no-cache \
-      "netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@${PLUGIN_VERSION}" \
- && apt-get purge -y --auto-remove git \
- && rm -rf /var/lib/apt/lists/*
+RUN uv pip install --no-cache "netbox-plugin-applications==${PLUGIN_VERSION}"
 
 USER 999
 ```
@@ -252,7 +248,7 @@ x-netbox-plugins: &netbox-plugins
     dockerfile: Dockerfile-plugins
     args:
       NETBOX_IMAGE_TAG: "v4.7-5.1.1"
-      PLUGIN_VERSION: "v0.5.1"
+      PLUGIN_VERSION: "0.12.0"
   image: netbox-with-plugins:latest
 
 services:
@@ -307,38 +303,44 @@ l'interface.
 
 ### Sans accès à un dépôt distant pendant la construction
 
-Sur un réseau fermé, la construction précédente échoue deux fois : `apt-get` ne joint pas les
-dépôts Debian, et `uv pip` ne joint pas GitHub. La parade tient en une phrase : **on apporte le
-paquet déjà construit**.
+Sur un réseau fermé, la construction précédente échoue : `uv pip` ne joint pas PyPI. La parade
+tient en une phrase : **on apporte le paquet déjà téléchargé**.
 
 C'est possible sans contorsion parce que **le plugin ne déclare aucune dépendance d'exécution**.
 Une roue (`.whl`) s'installe donc entièrement hors ligne — rien à résoudre, rien à télécharger.
 
-#### 1. Produire la roue, là où le réseau existe
+#### 1. Récupérer la roue, là où le réseau existe
+
+**Le plus simple** — depuis PyPI, sans cloner ni construire :
+
+```bash
+pip download netbox-plugin-applications==0.12.0 --no-deps -d .
+```
+
+`--no-deps` n'est pas une optimisation : le plugin **ne déclare aucune dépendance d'exécution**,
+donc il n'y a rien d'autre à télécharger. C'est ce qui rend l'installation hors ligne possible
+sans contorsion.
+
+**Sans Python sur le poste connecté** — la roue est attachée à chaque release :
+<https://github.com/AurevLan/netbox-plugin-applications/releases>. Un simple téléchargement.
+
+**Depuis les sources**, si vous voulez construire vous-même :
 
 ```bash
 git clone https://github.com/AurevLan/netbox-plugin-applications
-cd netbox-plugin-applications
-git checkout v0.11.0
-
-python -m pip install build
-python -m build --wheel
+cd netbox-plugin-applications && git checkout v0.12.0
+python -m pip install build && python -m build --wheel
 ```
 
-Résultat : `dist/netbox_plugin_applications-0.11.0-py3-none-any.whl`, **91 Kio**. C'est ce
-fichier qu'on transporte — clé USB, dépôt interne, partage de fichiers.
-
-> **Ni Python ni réseau sur la machine de construction ?** L'intégration continue conserve la
-> roue en artefact à chaque poussée — onglet *Actions* → une exécution de *Contrôles* → artefact
-> **`paquet`**, disponible 90 jours. On la télécharge depuis un poste connecté et on la
-> transporte.
+Dans les trois cas, le résultat est le même fichier : `netbox_plugin_applications-0.12.0-py3-none-any.whl`,
+**91 Kio**. C'est lui qu'on transporte — clé USB, dépôt interne, partage de fichiers.
 
 #### 2. La placer à côté du Dockerfile
 
 ```
 mon-netbox-docker/
 ├── Dockerfile-plugins
-└── netbox_plugin_applications-0.11.0-py3-none-any.whl
+└── netbox_plugin_applications-0.12.0-py3-none-any.whl
 ```
 
 #### 3. Un Dockerfile qui ne sort pas
@@ -363,8 +365,8 @@ Trois différences avec la version connectée, et chacune compte :
 
 | | Version connectée | Version hors ligne |
 |---|---|---|
-| `apt-get install git` | nécessaire | **supprimé** — plus rien à cloner |
-| Source du paquet | `git+https://…@tag` | un fichier local |
+| Accès réseau | PyPI | **aucun** |
+| Source du paquet | `netbox-plugin-applications==X.Y.Z` | un fichier local |
 | Version installée | portée par le tag | **portée par le nom du fichier** |
 
 #### 4. Construire, en s'interdisant le réseau
@@ -384,12 +386,14 @@ docker run --rm --network none netbox-with-plugins:latest \
   python -c "from importlib.metadata import version; print(version('netbox-plugin-applications'))"
 ```
 
-✅ **Éprouvé le 2026-09-23** sur l'image `netboxcommunity/netbox:v4.7-5.1.1` :
+✅ **Éprouvé le 2026-09-23** — procédure rejouée telle qu'elle est écrite ci-dessus, en partant
+de `pip download`, sur l'image `netboxcommunity/netbox:v4.7-5.1.1` :
 
 | Contrôle | Résultat |
 |---|---|
+| `pip download` depuis PyPI | ✅ un seul fichier, 93 Kio |
 | Construction avec `--network none` | ✅ réussie |
-| Version installée | ✅ `0.11.0` |
+| Version installée | ✅ `0.12.0` |
 | Gabarits HTML embarqués | ✅ présents |
 | Migrations embarquées | ✅ 10 |
 | `manage.py check` avec le plugin activé | ✅ *System check identified no issues* |
@@ -406,12 +410,12 @@ dans le nom du fichier — c'est la seule trace de ce qui a réellement été in
 
 ### Installation classique (NetBox installé directement sur un serveur)
 
-> **Le paquet n'est pas encore publié sur PyPI.** L'installation se fait depuis ce dépôt.
+Le paquet est publié sur **[PyPI](https://pypi.org/project/netbox-plugin-applications/)**.
 
 ```bash
 # 1. Installer dans l'environnement virtuel de NetBox — pas celui du système
 source /opt/netbox/venv/bin/activate
-pip install "netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.5.1"
+pip install netbox-plugin-applications==0.12.0
 ```
 
 ```python
@@ -432,8 +436,7 @@ sudo systemctl restart netbox netbox-rq
 # 5. Survivre aux mises à jour de NetBox
 #    upgrade.sh recrée l'environnement virtuel : sans cette ligne, le plugin
 #    disparaîtrait silencieusement à la prochaine montée de version.
-echo 'netbox-plugin-applications @ git+https://github.com/AurevLan/netbox-plugin-applications@v0.5.1' \
-  >> /opt/netbox/local_requirements.txt
+echo 'netbox-plugin-applications==0.12.0' >> /opt/netbox/local_requirements.txt
 ```
 
 > **L'étape 5 est celle qu'on oublie.** Le script `upgrade.sh` de NetBox reconstruit

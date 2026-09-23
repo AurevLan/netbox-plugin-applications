@@ -3,6 +3,21 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Changé — l'installation passe par PyPI
+
+- **Le `Dockerfile` n'a plus besoin de `git`.** Trois lignes remplacent l'installation depuis un
+  dépôt, son `apt-get install git` et le `purge` qui suivait :
+  `uv pip install "netbox-plugin-applications==X.Y.Z"`. Moins de couches, moins de surface.
+- **L'installation classique** devient `pip install netbox-plugin-applications==X.Y.Z`.
+- **La voie hors ligne se simplifie** : `pip download … --no-deps` remplace le clone suivi d'une
+  construction. Les deux autres sources restent documentées — la roue attachée à chaque release,
+  ou une construction depuis les sources.
+- Procédure hors ligne **rejouée telle qu'elle est écrite**, en partant de `pip download` :
+  construction `--network none`, plugin en `0.12.0`, gabarits et migrations présents,
+  `manage.py check` sans anomalie.
+
 ## [0.12.0] — 2026-09-23
 
 ### Sécurité — élévation de privilège corrigée
