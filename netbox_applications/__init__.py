@@ -6,8 +6,11 @@ from netbox.plugins import PluginConfig
 class ApplicationsConfig(PluginConfig):
     name = "netbox_applications"
     verbose_name = "Applications"
-    description = "Fiche applicative au sens CMDB : client, environnement, maintenance, référents, VM."
-    version = "0.11.1"
+    description = (
+        "Fiche applicative au sens CMDB : client, criticité, engagements de continuité, "
+        "déploiements par environnement, machines et pare-feu applicatif."
+    )
+    version = "0.11.2"
     author = "Aurelien"
     base_url = "applications"
     # Contrainte de version : si une montée de NetBox casse l'API plugin, le

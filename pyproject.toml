@@ -4,13 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netbox-plugin-applications"
-version = "0.11.1"
-description = "Catalogue applicatif CMDB pour NetBox : applications, déploiements multi-environnements, champs ITIL."
+version = "0.11.2"
+# Identique, au mot près, à la description du dépôt GitHub. Deux descriptions
+# du même paquet finissent par diverger, et on ne sait plus laquelle fait foi.
+description = "Catalogue applicatif CMDB pour NetBox : applications, déploiements multi-environnements, champs ITIL, WAF."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [{ name = "Aurelien" }]
-keywords = ["netbox", "netbox-plugin", "cmdb", "itil", "application"]
+keywords = ["netbox", "netbox-plugin", "cmdb", "itil", "application", "waf"]
 classifiers = [
     "Framework :: Django",
     "Intended Audience :: System Administrators",

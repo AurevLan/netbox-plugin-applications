@@ -3,6 +3,17 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.11.2] — 2026-09-23
+
+### Changé
+
+- **La description du paquet est désormais identique, au mot près, à celle du dépôt.** Deux
+  descriptions du même paquet finissent par diverger, et on ne sait plus laquelle fait foi. Le
+  pare-feu applicatif, ajouté en 0.11.0, y figure enfin.
+- La description affichée **dans NetBox** — autre public, autre formulation — était restée à
+  l'état de la 0.1.0 : ni criticité, ni engagements de continuité, ni WAF.
+- Mot-clé `waf` ajouté pour la recherche sur PyPI.
+
 ## [0.11.1] — 2026-09-23
 
 ### Ajouté
