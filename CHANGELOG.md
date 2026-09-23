@@ -3,6 +3,18 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.11.3] — 2026-09-23
+
+### Corrigé
+
+- **Le garde-fou de publication PyPI ne voyait pas une variable d'environnement.** Il était posé
+  sur le *job*, dont la condition est évaluée **avant** le chargement de l'environnement `pypi` :
+  une variable définie là y était donc invisible, et la tâche restait sautée sans qu'on
+  comprenne pourquoi. Le garde-fou est descendu au niveau de l'**étape**, où la variable est lue
+  qu'elle soit posée sur le dépôt ou sur l'environnement.
+- La tâche **dit désormais à voix haute** pourquoi elle publie ou non, et quelle valeur elle a
+  lue. Une étape sautée sans explication se lit comme une panne.
+
 ## [0.11.2] — 2026-09-23
 
 ### Changé

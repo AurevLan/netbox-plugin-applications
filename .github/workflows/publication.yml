@@ -84,13 +84,16 @@ jobs:
     name: Publier sur PyPI
     needs: construire
     runs-on: ubuntu-latest
-    # Tant que la publication de confiance n'est pas configurée côté PyPI,
-    # cette tâche est SAUTÉE plutôt qu'en échec. Un job rouge en permanence
-    # finit par ne plus être lu — c'est l'histoire de ce dépôt.
+    # Le garde-fou est posé sur l'ÉTAPE, pas sur le job. Une condition de job
+    # est évaluée AVANT le démarrage, donc avant le chargement de
+    # l'environnement « pypi » : une variable définie sur cet environnement y
+    # serait invisible, et la tâche resterait sautée sans qu'on comprenne
+    # pourquoi. Au niveau de l'étape, la variable est lue qu'elle soit posée
+    # sur le dépôt OU sur l'environnement.
     #
-    # Pour l'activer : Settings → Secrets and variables → Actions → Variables,
-    # créer PUBLIER_SUR_PYPI = oui.
-    if: vars.PUBLIER_SUR_PYPI == 'oui'
+    # Pour activer : une variable PUBLIER_SUR_PYPI = oui, au choix dans
+    # Settings → Secrets and variables → Actions → Variables (dépôt),
+    # ou sur l'environnement « pypi » lui-même.
     # « Trusted publishing » : PyPI reconnaît ce dépôt, ce workflow et cet
     # environnement, et délivre un jeton éphémère. AUCUN SECRET n'est stocké
     # ici — rien à faire fuiter, rien à faire tourner.
@@ -102,4 +105,17 @@ jobs:
         with:
           name: paquet
           path: dist/
+      # Dire à voix haute ce qui va se passer : une étape sautée sans
+      # explication se lit comme une panne.
+      - name: État du garde-fou
+        run: |
+          if [ "${{ vars.PUBLIER_SUR_PYPI }}" = "oui" ]; then
+            echo "PUBLIER_SUR_PYPI=oui — publication sur PyPI."
+          else
+            echo "PUBLIER_SUR_PYPI absente ou différente de « oui »."
+            echo "Valeur lue : « ${{ vars.PUBLIER_SUR_PYPI }} »"
+            echo "Publication PyPI ignorée. Voir CONTRIBUTING.md § Activer la publication PyPI."
+          fi
+
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        if: vars.PUBLIER_SUR_PYPI == 'oui'

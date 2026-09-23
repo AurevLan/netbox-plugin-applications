@@ -71,8 +71,14 @@ par ne plus être lu.
    propriétaire `AurevLan`, dépôt `netbox-plugin-applications`, workflow `publication.yml`,
    environnement `pypi`.
 2. Sur **GitHub**, *Settings → Environments* → créer l'environnement `pypi`.
-3. Toujours sur GitHub, *Settings → Secrets and variables → Actions → Variables* → créer
-   `PUBLIER_SUR_PYPI` = `oui`.
+3. Une variable `PUBLIER_SUR_PYPI` = `oui`, **au choix** :
+   - *Settings → Secrets and variables → Actions → onglet **Variables*** → *New repository
+     variable* — portée dépôt ;
+   - ou sur l'environnement `pypi` lui-même — *Settings → Environments → pypi → Variables*.
+
+   > **Une *Variable*, pas un *Secret*.** Les deux onglets sont voisins ; un secret n'est jamais
+   > lisible d'une condition. Et la comparaison est stricte : `Oui`, `OUI` ou un espace en trop
+   > ne correspondent pas.
 
 **Aucun jeton à créer, à stocker ni à faire tourner** : PyPI reconnaît le dépôt, le workflow et
 l'environnement, et délivre un jeton éphémère à chaque publication.
