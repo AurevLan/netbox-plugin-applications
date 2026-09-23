@@ -3,6 +3,20 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+
+- **Procédure d'installation sans accès à un dépôt distant.** Sur un réseau fermé, la
+  construction habituelle échoue deux fois : `apt-get` ne joint pas les dépôts Debian et
+  `uv pip` ne joint pas GitHub. On apporte désormais la **roue déjà construite** — possible sans
+  contorsion parce que le plugin **ne déclare aucune dépendance d'exécution**.
+- **L'intégration continue conserve la roue en artefact** (`paquet`, 90 jours). Sans cela, il
+  fallait une machine disposant à la fois de Python et du réseau pour la reconstruire.
+
+> **Éprouvée, pas seulement écrite** : image construite avec `--network none`, plugin chargé,
+> gabarits et migrations présents, `manage.py check` sans anomalie.
+
 ## [0.11.0] — 2026-09-17
 
 ### Ajouté — pare-feu applicatif et serveur virtuel

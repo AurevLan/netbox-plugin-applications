@@ -299,9 +299,110 @@ l'interface.
 | `relation "netbox_applications_..." does not exist` | l'image a été construite sans le plugin, ou le conteneur tourne sur une image antérieure — reconstruire puis `up -d` |
 | Les tâches en arrière-plan échouent | `netbox-worker` n'utilise pas la même image que `netbox` |
 | **La recherche ne trouve rien** | index jamais peuplé — lancer `manage.py reindex netbox_applications` |
+| `Could not resolve host` / `Temporary failure in name resolution` à la construction | réseau fermé — voir [Sans accès à un dépôt distant](#sans-accès-à-un-dépôt-distant-pendant-la-construction) |
+| `error: Multiple files match pattern` sur le `COPY` de la roue | deux roues dans le répertoire : n'en garder qu'une |
 | **La recherche ne reflète pas les modifications** | `netbox-worker` sans le plugin : il traite la tâche d'indexation sans savoir indexer ces objets, **et sans erreur** |
 | Démarrage déclaré `unhealthy` | `start_period` trop court sur une machine lente |
 | Le plugin **recule de version** sans erreur | une valeur de repli sur `PLUGIN_VERSION` (`${PLUGIN_VERSION:-v0.1.0}`) : la variable manquante fait construire une version ancienne, sous le nom d'image attendu. Préférer `${PLUGIN_VERSION:?}`, qui **arrête** la commande |
+
+### Sans accès à un dépôt distant pendant la construction
+
+Sur un réseau fermé, la construction précédente échoue deux fois : `apt-get` ne joint pas les
+dépôts Debian, et `uv pip` ne joint pas GitHub. La parade tient en une phrase : **on apporte le
+paquet déjà construit**.
+
+C'est possible sans contorsion parce que **le plugin ne déclare aucune dépendance d'exécution**.
+Une roue (`.whl`) s'installe donc entièrement hors ligne — rien à résoudre, rien à télécharger.
+
+#### 1. Produire la roue, là où le réseau existe
+
+```bash
+git clone https://github.com/AurevLan/netbox-plugin-applications
+cd netbox-plugin-applications
+git checkout v0.11.0
+
+python -m pip install build
+python -m build --wheel
+```
+
+Résultat : `dist/netbox_plugin_applications-0.11.0-py3-none-any.whl`, **91 Kio**. C'est ce
+fichier qu'on transporte — clé USB, dépôt interne, partage de fichiers.
+
+> **Ni Python ni réseau sur la machine de construction ?** L'intégration continue conserve la
+> roue en artefact à chaque poussée — onglet *Actions* → une exécution de *Contrôles* → artefact
+> **`paquet`**, disponible 90 jours. On la télécharge depuis un poste connecté et on la
+> transporte.
+
+#### 2. La placer à côté du Dockerfile
+
+```
+mon-netbox-docker/
+├── Dockerfile-plugins
+└── netbox_plugin_applications-0.11.0-py3-none-any.whl
+```
+
+#### 3. Un Dockerfile qui ne sort pas
+
+```dockerfile
+ARG NETBOX_IMAGE_TAG=v4.7-5.1.1
+FROM netboxcommunity/netbox:${NETBOX_IMAGE_TAG}
+
+USER root
+
+# Ni git, ni dépôt distant : la roue est déjà là.
+# « uv pip » et non « pip » : l'image officielle installe avec uv, et son
+# environnement virtuel n'embarque PAS pip.
+COPY netbox_plugin_applications-*.whl /tmp/
+RUN uv pip install --no-cache /tmp/netbox_plugin_applications-*.whl \
+ && rm -f /tmp/netbox_plugin_applications-*.whl
+
+USER 999
+```
+
+Trois différences avec la version connectée, et chacune compte :
+
+| | Version connectée | Version hors ligne |
+|---|---|---|
+| `apt-get install git` | nécessaire | **supprimé** — plus rien à cloner |
+| Source du paquet | `git+https://…@tag` | un fichier local |
+| Version installée | portée par le tag | **portée par le nom du fichier** |
+
+#### 4. Construire, en s'interdisant le réseau
+
+```bash
+docker build --network none -t netbox-with-plugins:latest .
+```
+
+`--network none` n'est pas une précaution de style : c'est ce qui **prouve** que la construction
+ne dépend d'aucun accès. Sans ce drapeau, une construction qui réussit sur un poste connecté
+peut échouer sur le réseau cible, et on ne le découvre qu'à ce moment-là.
+
+#### 5. Vérifier avant de déployer
+
+```bash
+docker run --rm --network none netbox-with-plugins:latest \
+  python -c "from importlib.metadata import version; print(version('netbox-plugin-applications'))"
+```
+
+✅ **Éprouvé le 2026-09-23** sur l'image `netboxcommunity/netbox:v4.7-5.1.1` :
+
+| Contrôle | Résultat |
+|---|---|
+| Construction avec `--network none` | ✅ réussie |
+| Version installée | ✅ `0.11.0` |
+| Gabarits HTML embarqués | ✅ présents |
+| Migrations embarquées | ✅ 10 |
+| `manage.py check` avec le plugin activé | ✅ *System check identified no issues* |
+
+#### Ce qui reste à faire à chaque montée de version
+
+**Reconstruire la roue et la recopier.** C'est le coût de cette méthode : la version n'est plus
+tirée d'un tag, elle est portée par un fichier qu'un humain déplace. Gardez le numéro de version
+dans le nom du fichier — c'est la seule trace de ce qui a réellement été installé.
+
+> **Le piège à connaître** : si l'ancienne roue reste à côté de la nouvelle, le motif
+> `netbox_plugin_applications-*.whl` en désigne deux et la construction échoue — ou pire,
+> installe la mauvaise. Un seul fichier dans le répertoire, toujours.
 
 ### Installation classique (NetBox installé directement sur un serveur)
 

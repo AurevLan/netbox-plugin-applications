@@ -112,6 +112,16 @@ jobs:
       # un paquet refusé par PyPI après coup est bien plus pénible.
       - run: twine check dist/*
 
+      # La roue est conservée comme artefact : c'est ce qu'on emporte pour
+      # installer le plugin sur un réseau fermé, où la construction ne peut
+      # joindre ni GitHub ni les dépôts Debian. Sans cette étape, il faudrait
+      # une machine avec Python ET le réseau pour la reconstruire.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: paquet
+          path: dist/
+          retention-days: 90
+
   integration:
     name: Chargement réel dans NetBox
     runs-on: ubuntu-latest
