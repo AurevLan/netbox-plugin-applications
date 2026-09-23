@@ -3,6 +3,37 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.12.0] — 2026-09-23
+
+### Sécurité — élévation de privilège corrigée
+
+**Un compte dépourvu de TOUTE permission pouvait créer une application et son déploiement** par
+l'assistant de déclaration, et lire le nom des applications du catalogue sur la page
+« Démarrer » — alors que l'API et les listes lui répondaient `403`.
+
+- **Cause** : les vues génériques de NetBox portent une garde de permission ; `django.views.View`
+  n'en porte aucune. Les deux vues écrites à la main — `DemarrerView` et `AssistantView` — n'en
+  héritaient donc rien.
+- **Correction** : `ObjectPermissionRequiredMixin`. La page « Démarrer » exige
+  `view_application` ; l'assistant exige **`add_application` ET `add_deployment`**, puisqu'il
+  crée les deux dans la même transaction — n'en vérifier qu'une laisserait créer l'autre sans
+  droit.
+- **Portée** : toute version de 0.9.0 à 0.11.3, pour quiconque a des comptes NetBox en lecture
+  seule. Aucune donnée n'est exposée à un visiteur non authentifié : `LOGIN_REQUIRED` de NetBox
+  s'applique.
+
+**Mettre à jour si des comptes non administrateurs ont accès à NetBox.**
+
+### Ajouté
+
+- **8 tests de permission**, dont un qui parcourt **toutes les routes du plugin** et échoue si
+  l'une d'elles ne déclare aucune garde — il attrapera la prochaine vue écrite à la main, pas
+  seulement les deux corrigées.
+
+> **Le piège qui a failli me tromper en corrigeant** : NetBox n'évalue pas
+> `user.user_permissions` mais ses propres objets `ObjectPermission`. Un test qui accorde une
+> permission Django accorde en réalité zéro droit, et conclut à tort que la vue est trop stricte.
+
 ## [0.11.3] — 2026-09-23
 
 ### Corrigé

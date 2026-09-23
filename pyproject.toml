@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netbox-plugin-applications"
-version = "0.11.3"
+version = "0.12.0"
 # Identique, au mot près, à la description du dépôt GitHub. Deux descriptions
 # du même paquet finissent par diverger, et on ne sait plus laquelle fait foi.
 description = "Catalogue applicatif CMDB pour NetBox : applications, déploiements multi-environnements, champs ITIL, WAF."

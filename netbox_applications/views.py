@@ -16,7 +16,12 @@ from netbox.object_actions import (
 from netbox.ui import layout
 from netbox.ui.panels import RelatedObjectsPanel
 from netbox.views import generic
-from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view
+from utilities.views import (
+    GetRelatedModelsMixin,
+    ObjectPermissionRequiredMixin,
+    ViewTab,
+    register_model_view,
+)
 from virtualization.models import VirtualMachine
 
 from . import assistant, filtersets, forms, models, panels, tables
@@ -135,8 +140,14 @@ for _modele, _table, _filtre, _form in _REFERENCES:
 # --- Parcours guidé -------------------------------------------------------------
 
 
-class DemarrerView(View):
+class DemarrerView(ObjectPermissionRequiredMixin, View):
     """Parcours guidé de création d'une fiche applicative.
+
+    LA GARDE N'EST PAS DÉCORATIVE. Cette page nomme les applications du
+    catalogue ; sans elle, un compte dépourvu de tout droit les lisait, alors
+    que la liste ordinaire lui répondait 403. Une vue écrite à la main
+    n'hérite d'aucune protection : les vues génériques de NetBox en portent
+    une, pas « django.views.View ».
 
     POURQUOI UNE PAGE ET PAS UNE DOCUMENTATION. Le point de blocage d'un
     nouveau venu n'est pas la syntaxe d'un formulaire : c'est de comprendre
@@ -148,6 +159,12 @@ class DemarrerView(View):
     rattachée. Elle reste donc utile après la première prise en main — c'est
     une liste de ce qui est resté à moitié fait.
     """
+
+    # « queryset » sert au filtrage par permissions d'objet du mixin.
+    queryset = models.Application.objects.all()
+
+    def get_required_permission(self):
+        return "netbox_applications.view_application"
 
     def get(self, request):
         applications = models.Application.objects.annotate(
@@ -223,8 +240,17 @@ class DeclarerAvecAssistant(ObjectAction):
         return None
 
 
-class AssistantView(View):
+class AssistantView(ObjectPermissionRequiredMixin, View):
     """Les quatre étapes de l'assistant, dans la modale de NetBox.
+
+    CETTE VUE ÉCRIT EN BASE. Un compte sans aucune permission a pu créer une
+    application et son déploiement par ce chemin, alors que l'API et la liste
+    lui répondaient 403 — le formulaire ordinaire passe par les vues
+    génériques, l'assistant non.
+
+    Les DEUX permissions sont exigées : l'assistant crée une application ET un
+    déploiement dans la même transaction. N'en vérifier qu'une laisserait
+    créer l'autre sans droit.
 
     Une seule vue pour toutes les étapes : le numéro d'étape est porté par
     l'URL, l'état par la session. Chaque réponse est un FRAGMENT de modale,
@@ -232,6 +258,12 @@ class AssistantView(View):
     """
 
     gabarit = "netbox_applications/assistant.html"
+
+    queryset = models.Application.objects.all()
+    additional_permissions = ("netbox_applications.add_deployment",)
+
+    def get_required_permission(self):
+        return "netbox_applications.add_application"
 
     def _session(self, request):
         return request.session.setdefault(assistant.CLE_SESSION, {})
