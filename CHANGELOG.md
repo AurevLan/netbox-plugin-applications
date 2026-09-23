@@ -3,7 +3,7 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.11.1] — 2026-09-23
 
 ### Ajouté
 
@@ -13,6 +13,12 @@ Versionnage : [SemVer](https://semver.org/lang/fr/).
   contorsion parce que le plugin **ne déclare aucune dépendance d'exécution**.
 - **L'intégration continue conserve la roue en artefact** (`paquet`, 90 jours). Sans cela, il
   fallait une machine disposant à la fois de Python et du réseau pour la reconstruire.
+- **Chaque tag produit désormais une *release* GitHub**, avec les notes tirées du CHANGELOG et
+  **la roue attachée**. Un artefact de CI expire et exige un compte ; une release est publique et
+  durable — c'est elle qu'on emporte pour une installation hors ligne.
+- La publication sur **PyPI** est câblée par *trusted publishing* : PyPI reconnaît le dépôt, le
+  workflow et l'environnement, et délivre un jeton éphémère. **Aucun secret n'est stocké.** La
+  tâche reste sautée tant que la variable `PUBLIER_SUR_PYPI` n'est pas posée.
 
 > **Éprouvée, pas seulement écrite** : image construite avec `--network none`, plugin chargé,
 > gabarits et migrations présents, `manage.py check` sans anomalie.

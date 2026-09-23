@@ -1,0 +1,105 @@
+name: Publication
+
+# Déclenchée par la POSE D'UN TAG, jamais par un envoi sur « main » : une
+# version se publie quand on décide qu'elle existe, pas à chaque correction.
+#
+# Les actions sont épinglées par empreinte de commit, comme dans « Contrôles ».
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  construire:
+    name: Construire le paquet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      # La version du paquet doit être celle du tag. Sans ce contrôle, on
+      # publierait une 0.11.0 sous l'étiquette v0.12.0 — et personne ne s'en
+      # apercevrait avant d'essayer de l'installer.
+      - name: Le tag et la version du paquet concordent-ils ?
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          paquet="$(python -c "
+          import tomllib
+          print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])
+          ")"
+          if [ "$tag" != "$paquet" ]; then
+            echo "ECHEC : tag v$tag, mais pyproject.toml déclare $paquet." >&2
+            exit 1
+          fi
+          echo "Tag et paquet concordent : $paquet"
+
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check dist/*
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: paquet
+          path: dist/
+
+  publier-github:
+    name: Publier la release GitHub
+    needs: construire
+    runs-on: ubuntu-latest
+    permissions:
+      # Créer une release écrit dans le dépôt : c'est le seul droit élargi ici.
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: paquet
+          path: dist/
+
+      - name: Extraire les notes du CHANGELOG
+        run: python .github/scripts/notes_de_version.py "${GITHUB_REF_NAME}" > notes.md
+
+      # « gh » est préinstallé sur les exécuteurs : aucune action tierce, donc
+      # aucune surface d'attaque ajoutée pour créer une release.
+      #
+      # La ROUE EST ATTACHÉE à la release, et c'est le point : elle devient
+      # téléchargeable publiquement et durablement, là où un artefact de CI
+      # expire et exige un compte. C'est ce qu'emporte quelqu'un qui installe
+      # le plugin sur un réseau fermé.
+      - name: Créer la release avec la roue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            dist/*
+
+  publier-pypi:
+    name: Publier sur PyPI
+    needs: construire
+    runs-on: ubuntu-latest
+    # Tant que la publication de confiance n'est pas configurée côté PyPI,
+    # cette tâche est SAUTÉE plutôt qu'en échec. Un job rouge en permanence
+    # finit par ne plus être lu — c'est l'histoire de ce dépôt.
+    #
+    # Pour l'activer : Settings → Secrets and variables → Actions → Variables,
+    # créer PUBLIER_SUR_PYPI = oui.
+    if: vars.PUBLIER_SUR_PYPI == 'oui'
+    # « Trusted publishing » : PyPI reconnaît ce dépôt, ce workflow et cet
+    # environnement, et délivre un jeton éphémère. AUCUN SECRET n'est stocké
+    # ici — rien à faire fuiter, rien à faire tourner.
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: paquet
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
