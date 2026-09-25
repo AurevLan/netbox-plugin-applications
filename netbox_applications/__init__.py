@@ -10,13 +10,16 @@ class ApplicationsConfig(PluginConfig):
         "Fiche applicative au sens CMDB : client, criticité, engagements de continuité, "
         "déploiements par environnement, machines et pare-feu applicatif."
     )
-    version = "0.12.0"
+    version = "0.13.0"
     author = "Aurelien"
     base_url = "applications"
-    # Contrainte de version : si une montée de NetBox casse l'API plugin, le
-    # démarrage échoue EXPLICITEMENT plutôt que de produire un comportement
-    # imprévisible. Le coût d'un plugin est ainsi rendu visible, pas caché.
-    min_version = "4.7.0"
+    # Plancher ÉPROUVÉ, pas supposé : la suite complète a été exécutée sur
+    # NetBox 4.5.10 et 4.7.0 (voir la matrice d'intégration continue).
+    #
+    # ⚠️ NetBox N'ARRÊTE PAS le démarrage si cette contrainte n'est pas
+    # satisfaite : il émet un avertissement et charge le reste. Le menu
+    # n'apparaît pas, et rien dans l'interface ne dit pourquoi.
+    min_version = "4.5.0"
 
 
 config = ApplicationsConfig

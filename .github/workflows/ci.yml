@@ -123,10 +123,19 @@ jobs:
           retention-days: 90
 
   integration:
-    name: Chargement réel dans NetBox
+    name: NetBox ${{ matrix.netbox }}
     runs-on: ubuntu-latest
     # C'est le contrôle qui compte : un plugin qui passe le lint mais ne se
     # charge pas dans NetBox n'a aucune valeur.
+    #
+    # DEUX VERSIONS, et ce n'est pas du zèle. Les dépendances de migration
+    # s'épinglent sur la dernière migration de l'hôte où « makemigrations » a
+    # tourné : sans essai sur le plancher annoncé, la compatibilité 4.5 se
+    # perdrait à la première migration générée, sans que rien ne le signale.
+    strategy:
+      fail-fast: false
+      matrix:
+        netbox: ["v4.5-4.0.2", "v4.7-5.1.1"]
     services:
       postgres:
         image: postgres:18-alpine
@@ -146,7 +155,7 @@ jobs:
       - name: Construire une image NetBox avec le plugin
         run: |
           cat > Dockerfile.test <<'DOCKER'
-          FROM netboxcommunity/netbox:v4.7-5.1.1
+          FROM netboxcommunity/netbox:${{ matrix.netbox }}
           USER root
           COPY . /plugin/
           # « coverage » mesure ce que la suite de tests atteint réellement.

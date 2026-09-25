@@ -3,7 +3,34 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.13.0] — 2026-09-25
+
+### Changé — compatibilité NetBox élargie à la 4.5
+
+Le plancher passe de **4.7.0 à 4.5.0**, et ce n'est pas une déclaration : les **91 tests**
+s'exécutent désormais sur **NetBox 4.5.10 et 4.7.0** à chaque poussée.
+
+- **`min_version = "4.5.0"`.** L'ancienne valeur était une prudence posée à la conception, jamais
+  éprouvée. Aucune API propre à la 4.7 n'est employée — pas même les panneaux déclaratifs, qui
+  existent déjà en 4.5.
+- **Trois migrations épinglaient des nœuds propres à la 4.7** : `extras 0144`, `ipam 0097`,
+  `tenancy 0026`… là où la 4.5 s'arrête respectivement à `0134`, `0086` et `0023`. Le graphe de
+  migration refusait de se résoudre, et **le plugin était donc ININSTALLABLE** sur toute version
+  antérieure. Les dépendances pointent maintenant vers des migrations *squashed*, présentes de la
+  4.5 à la 4.7.
+- **La matrice d'intégration continue couvre les deux versions.** Sans cela, la compatibilité se
+  perdrait à la première migration générée : `makemigrations` réépingle la dernière migration de
+  l'hôte sur lequel il tourne.
+
+> **Aucun effet sur les installations existantes.** Django n'utilise les dépendances que pour
+> ordonner le graphe ; l'état appliqué est enregistré par nom de migration.
+
+### Corrigé — dans la documentation
+
+- Le README affirmait qu'une version hors bornes **« fait échouer le démarrage explicitement »**.
+  **C'est faux** : NetBox émet un avertissement dans ses journaux et charge le reste. Le menu
+  n'apparaît pas, et **rien dans l'interface ne dit pourquoi**. Le tableau de dépannage porte
+  désormais la commande qui le révèle.
 
 ### Changé — l'installation passe par PyPI
 

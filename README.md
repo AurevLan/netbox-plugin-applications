@@ -6,7 +6,7 @@
 [![Couverture](https://img.shields.io/badge/couverture-98.3%25-brightgreen)](#ce-que-la-cha%C3%AEne-de-contr%C3%B4le-v%C3%A9rifie)
 [![PyPI](https://img.shields.io/pypi/v/netbox-plugin-applications)](https://pypi.org/project/netbox-plugin-applications/)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
-[![NetBox](https://img.shields.io/badge/NetBox-%E2%89%A5%204.7.0-blue)](https://netbox.dev)
+[![NetBox](https://img.shields.io/badge/NetBox-4.5%20%7C%204.6%20%7C%204.7-blue)](https://netbox.dev)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
 **Catalogue applicatif CMDB pour NetBox** — applications, déploiements multi-environnements,
@@ -141,6 +141,7 @@ d'intention. Ce tableau dit ce qui se cache derrière.
 | **Actions épinglées par empreinte** | une étiquette `v5` peut être redéplacée vers un commit quelconque, qui s'exécuterait avec nos droits ; une empreinte ne change pas de contenu |
 | `permissions: contents: read` | moindre privilège sur tous les workflows |
 | **Qualifié sur 3.12, 3.13 et 3.14** | NetBox 4.7 s'exécute sur 3.14 : ne qualifier que sur 3.12 validerait une version que personne n'exécute |
+| **Suite exécutée sur NetBox 4.5 ET 4.7** | les dépendances de migration s'épinglent sur l'hôte où elles sont générées : sans essai sur le plancher annoncé, la compatibilité se perdrait en silence |
 | **Dependabot** | des outils de sécurité épinglés vieillissent, et leurs bases de vulnérabilités avec eux |
 | **pre-commit** | ce qui est refusé en intégration continue l'est avant le commit |
 
@@ -193,11 +194,21 @@ Dit ici plutôt que découvert à l'usage :
 
 | | |
 |---|---|
-| NetBox | ≥ 4.7.0 |
+| NetBox | **4.5 → 4.7** |
 | Python | ≥ 3.12 |
 
-`min_version` est déclaré dans le plugin : une version de NetBox incompatible fait **échouer le
-démarrage explicitement**, plutôt que de produire un comportement imprévisible.
+Les deux bornes sont **éprouvées** : la suite complète — 91 tests — s'exécute sur NetBox
+**4.5.10** et **4.7.0** à chaque poussée. Ce n'est pas une compatibilité déclarée, c'est une
+compatibilité mesurée.
+
+> ⚠️ **NetBox n'arrête PAS son démarrage si `min_version` n'est pas satisfaite.** Il émet un
+> avertissement dans ses journaux et charge le reste. **Le menu n'apparaît simplement pas**, et
+> rien dans l'interface ne dit pourquoi. Si le plugin semble absent après installation, c'est la
+> première chose à vérifier :
+>
+> ```bash
+> docker compose logs netbox | grep -i "unable to load plugin"
+> ```
 
 ### Avec netbox-docker
 
@@ -291,7 +302,7 @@ l'interface.
 | Symptôme | Cause |
 |---|---|
 | `exit code: 127` à la construction | `pip` utilisé au lieu de `uv pip` — l'image officielle n'a pas pip dans son venv |
-| Le menu n'apparaît pas | `PLUGINS` absent de `configuration/extra.py`, ou fichier non monté |
+| Le menu n'apparaît pas | `PLUGINS` absent de `configuration/extra.py`, fichier non monté, **ou version de NetBox hors bornes** — NetBox ne le signale que dans ses journaux |
 | `relation "netbox_applications_..." does not exist` | l'image a été construite sans le plugin, ou le conteneur tourne sur une image antérieure — reconstruire puis `up -d` |
 | Les tâches en arrière-plan échouent | `netbox-worker` n'utilise pas la même image que `netbox` |
 | **La recherche ne trouve rien** | index jamais peuplé — lancer `manage.py reindex netbox_applications` |

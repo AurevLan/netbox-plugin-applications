@@ -19,9 +19,24 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
+
+# DÉPENDANCES VOLONTAIREMENT RELÂCHÉES — ne pas les laisser se réépingler.
+#
+# « makemigrations » épingle, au moment où on le lance, la DERNIÈRE migration
+# de chaque application référencée. C'est une commodité de génération, pas un
+# besoin : ce dont ces modèles ont réellement besoin, c'est que les tables
+# référencées EXISTENT.
+#
+# Épinglées sur la dernière, ces dépendances rendaient le plugin
+# INSTALLABLE SUR UNE SEULE VERSION DE NETBOX : sur une version antérieure, le
+# nœud n'existe pas et le graphe de migration refuse de se résoudre.
+#
+# Les nœuds ci-dessous sont des migrations « squashed », présentes de NetBox
+# 4.5 à 4.7. Si vous régénérez une migration, VÉRIFIEZ ses dépendances : Django
+# y remettra celles de l'hôte sur lequel vous l'avez générée.
     dependencies = [
-        ('extras', '0144_customfield_status'),
-        ('ipam', '0097_merge_ipaddress_host_index_and_multi_protocol_services'),
+        ('extras', '0002_squashed_0059'),
+        ('ipam', '0002_squashed_0046'),
         ('netbox_applications', '0009_contrainte_unicite_retablie'),
     ]
 
