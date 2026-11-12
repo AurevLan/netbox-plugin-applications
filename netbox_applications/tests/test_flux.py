@@ -38,6 +38,29 @@ def _ct(objet):
     return ContentType.objects.get_for_model(objet)
 
 
+# Champs concrets du modèle « Service », relevés UNE FOIS : NetBox 4.7 porte
+# « port_mappings » (['tcp/8443']), la 4.5 portait « protocol » et « ports ».
+_CHAMPS_SERVICE = {champ.name for champ in Service._meta.get_fields()}
+
+
+def _service(parent, nom, mappings):
+    """Crée un objet « Service », quelle que soit la version de NetBox.
+
+    LE CODE DU PLUGIN LISAIT DÉJÀ LES DEUX FORMATS ; CES TESTS N'EN ÉCRIVAIENT
+    QU'UN. Ils ne s'exécutaient donc que sur la moitié des versions annoncées —
+    et c'est l'autre moitié qui est le PLANCHER du plugin. Constaté le
+    2026-11-12 en lançant la suite sur 4.5 : sept classes en erreur dès
+    « setUpClass », pour un code parfaitement compatible.
+
+    Un contrôle qui ne tourne pas sur la version la plus ancienne ne dit rien de
+    la compatibilité qu'on annonce.
+    """
+    if "port_mappings" in _CHAMPS_SERVICE:
+        return Service.objects.create(parent=parent, name=nom, port_mappings=list(mappings))
+    protocole, port = mappings[0].split("/")
+    return Service.objects.create(parent=parent, name=nom, protocol=protocole, ports=[int(port)])
+
+
 class SocleMixin:
     """Un déploiement, une VM qui expose un service, un serveur virtuel."""
 
@@ -60,7 +83,7 @@ class SocleMixin:
         cls.vm.save()
         cls.deploiement.virtual_machines.add(cls.vm)
 
-        cls.service = Service.objects.create(parent=cls.vm, name="https-interne", port_mappings=["tcp/8443"])
+        cls.service = _service(cls.vm, "https-interne", ["tcp/8443"])
         cls.vs = VirtualServer.objects.create(
             name="vs-facturation",
             ip_address=IPAddress.objects.create(address="10.70.0.10/24"),
@@ -144,7 +167,7 @@ class CoherenceTest(SocleMixin, TestCase):
     def test_a_service_of_another_machine_is_refused(self):
         """Emprunter les ports d'une machine qui n'est pas la destination rend la matrice fausse."""
         autre = VirtualMachine.objects.create(name="autre-01", cluster=self.grappe)
-        ailleurs = Service.objects.create(parent=autre, name="ailleurs", port_mappings=["tcp/9999"])
+        ailleurs = _service(autre, "ailleurs", ["tcp/9999"])
         flux = self.flux(service=ailleurs)
         with self.assertRaises(ValidationError) as leve:
             flux.full_clean()
@@ -518,3 +541,39 @@ class EtatsDesFluxTest(SocleMixin, TestCase):
         flux = self.flux(source_type=_ct(self.prefixe_clients), source_id=999999)
         self.assertIn("source supprimée", flux.libelle_source)
         self.assertEqual(flux.adresses_source, [])
+
+
+class ParcoursGuideTest(SocleMixin, TestCase):
+    """La page « Démarrer » est une liste de ce qui est resté à moitié fait.
+
+    Elle devait donc apprendre à voir le manque de flux, sinon elle aurait
+    affirmé qu'il ne reste rien alors qu'un port est exposé sans source connue.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.poser_le_socle()
+        cls.user = get_user_model().objects.create_superuser("guide", "guide@exemple.invalid", "x")
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def _etape_des_flux(self):
+        reponse = self.client.get(reverse("plugins:netbox_applications:demarrer"))
+        return next(e for e in reponse.context["etapes"] if e["numero"] == 5)
+
+    def test_an_exposed_service_without_any_flow_is_listed(self):
+        etape = self._etape_des_flux()
+        self.assertFalse(etape["faite"])
+        self.assertIn(self.deploiement, etape["reste"])
+
+    def test_declaring_a_flow_clears_the_step(self):
+        self.flux().save()
+        self.assertTrue(self._etape_des_flux()["faite"])
+
+    def test_a_deployment_exposing_nothing_is_not_asked_for_flows(self):
+        """Ne rien exposer n'est pas un manque : la page ne doit pas le réclamer."""
+        Deployment.objects.create(application=self.app, environment=Environment.objects.get(slug="recette"))
+        self.flux().save()
+        self.assertTrue(self._etape_des_flux()["faite"])

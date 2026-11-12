@@ -40,9 +40,21 @@ matrice de flux, on a une liste de ports ouverts. Cette version apporte l'autre 
 
 ### Éprouvé
 
-**135 tests** (91 auparavant), sur NetBox 4.5 et 4.7. Les sept types d'extrémité sont résolus en
-adresses dans les tests, y compris le cas d'une VM **sans adresse primaire** — celui d'une machine
-provisionnée mais pas encore configurée, c'est-à-dire celle pour laquelle on demande un flux.
+**149 tests** (91 auparavant), exécutés sur **NetBox 4.5 et 4.7**. Les sept types d'extrémité sont
+résolus en adresses dans les tests, y compris le cas d'une VM **sans adresse primaire** — celui
+d'une machine provisionnée mais pas encore configurée, c'est-à-dire celle pour laquelle on demande
+un flux.
+
+Le **parcours guidé** gagne une cinquième étape : « Déclarer les flux » liste les déploiements dont
+une machine expose un service sans qu'aucun flux ne dise d'où on l'atteint. Cette page est une liste
+de ce qui est resté à moitié fait ; sans cette étape, elle aurait affirmé qu'il ne reste rien alors
+qu'un port est exposé sans source connue.
+
+> **Un défaut trouvé en lançant la suite sur 4.5**, et il n'était pas dans le code du plugin : sept
+> classes de tests écrivaient `port_mappings` à la création d'un objet `Service`, format absent de
+> la 4.5. Le code lisait bien les deux formats ; **les tests n'en écrivaient qu'un**, donc ne
+> tournaient que sur la moitié des versions annoncées. Un contrôle qui ne tourne pas sur la version
+> la plus ancienne ne dit rien de la compatibilité qu'on annonce.
 
 ## [0.13.0] — 2026-09-25
 

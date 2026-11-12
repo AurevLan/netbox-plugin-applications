@@ -179,6 +179,17 @@ class DemarrerView(ObjectPermissionRequiredMixin, View):
         # personne n'a rattachée est le même oubli, vu de l'autre bout — et
         # celui-là ne se voit nulle part ailleurs.
         machines_orphelines = VirtualMachine.objects.filter(deployments__isnull=True)
+        # Un déploiement dont une machine EXPOSE un service, et pour lequel
+        # aucun flux n'est déclaré. C'est le même manque que les précédents,
+        # porté à l'échelle du catalogue : un port ouvert dont personne ne dit
+        # d'où on l'atteint. La matrice le signale déploiement par déploiement ;
+        # ici on dit LESQUELS il faut aller voir.
+        exposes_sans_flux = (
+            models.Deployment.objects.filter(virtual_machines__services__isnull=False)
+            .annotate(nb_flux=Count("flows", distinct=True))
+            .filter(nb_flux=0)
+            .distinct()
+        )
 
         etapes = [
             {
@@ -204,6 +215,12 @@ class DemarrerView(ObjectPermissionRequiredMixin, View):
                 "titre": "Rattacher les machines",
                 "faite": models.Deployment.objects.exists() and not sans_vm.exists(),
                 "reste": sans_vm,
+            },
+            {
+                "numero": 5,
+                "titre": "Déclarer les flux",
+                "faite": not exposes_sans_flux.exists(),
+                "reste": exposes_sans_flux,
             },
         ]
 

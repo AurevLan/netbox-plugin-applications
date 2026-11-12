@@ -189,6 +189,24 @@
                   </div>
                 </div>
               {% endif %}
+
+            {% elif etape.numero == 5 %}
+              <p class="text-muted mb-2">
+                Un objet <code>Service</code> de NetBox dit qu'une machine écoute sur un port.
+                Il ne dit pas <strong>depuis où on l'atteint</strong> : sans flux déclaré, le
+                catalogue porte une liste de ports ouverts, pas une matrice.
+              </p>
+              {% if etape.reste %}
+                <div class="alert alert-warning py-2 mb-2">
+                  <strong>Services exposés sans aucun flux déclaré :</strong>
+                  {% for deploiement in etape.reste %}
+                    <a href="{{ deploiement.get_absolute_url }}matrice/">{{ deploiement }}</a>{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                  <div class="small mt-1">
+                    L'onglet « Matrice de flux » de chacun montre les lignes à compléter.
+                  </div>
+                </div>
+              {% endif %}
             {% endif %}
           </div>
         </div>
