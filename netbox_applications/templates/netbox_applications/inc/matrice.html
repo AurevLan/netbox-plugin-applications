@@ -1,0 +1,94 @@
+{% load helpers %}
+{# La matrice elle-même. Partagée par les deux onglets : une seule mise en page #}
+{# pour un seul calcul, sinon l'une des deux finirait par mentir.               #}
+
+<div class="card">
+  <h2 class="card-header">
+    Matrice de flux
+    <div class="card-actions">
+      <a href="?export=csv" class="btn btn-sm btn-outline-secondary">
+        <i class="mdi mdi-download"></i> Export CSV
+      </a>
+    </div>
+  </h2>
+
+  <div class="card-body">
+    <p class="mb-2">
+      <span class="badge text-bg-green">{{ resume.en_vigueur }} ouvert{{ resume.en_vigueur|pluralize }}</span>
+      <span class="badge text-bg-secondary">{{ resume.declare }} déclaré{{ resume.declare|pluralize }}</span>
+      <span class="badge text-bg-cyan">{{ resume.deduit }} déduit{{ resume.deduit|pluralize }}</span>
+      {% if resume.a_declarer %}
+        <span class="badge text-bg-red">{{ resume.a_declarer }} à déclarer</span>
+      {% endif %}
+    </p>
+    <p class="text-muted mb-0">
+      Les lignes <strong>déduites</strong> ne sont pas stockées : elles découlent du modèle
+      (diffusion externe, serveur virtuel, objets <code>Service</code>) et se recalculent à chaque
+      affichage. Les lignes <strong>à déclarer</strong> signalent un port exposé dont aucune source
+      n'est connue — c'est ce qui manque à la matrice, et non une anomalie du réseau.
+    </p>
+  </div>
+
+  {% if lignes %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          {% if avec_environnement %}<th>Environnement</th>{% endif %}
+          <th>Origine</th>
+          <th>Source</th>
+          <th>Adresses source</th>
+          <th>Destination</th>
+          <th>Adresses destination</th>
+          <th>DNS</th>
+          <th>Protocole/port</th>
+          <th>État</th>
+          <th>Justification</th>
+          <th>Pare-feu</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in lignes %}
+          <tr{% if ligne.manque %} class="table-danger"{% endif %}>
+            {% if avec_environnement %}
+              <td>{{ ligne.deploiement.environment|linkify|placeholder }}</td>
+            {% endif %}
+            <td>
+              {% if ligne.est_declare %}
+                <span class="badge text-bg-secondary">déclaré</span>
+              {% elif ligne.manque %}
+                <span class="badge text-bg-red">à déclarer</span>
+              {% else %}
+                <span class="badge text-bg-cyan">déduit</span>
+              {% endif %}
+            </td>
+            <td>{{ ligne.source }}</td>
+            <td>
+              {% for adresse in ligne.adresses_source %}<code>{{ adresse }}</code><br>{% empty %}{{ ''|placeholder }}{% endfor %}
+            </td>
+            <td>
+              {% if ligne.flux %}<a href="{{ ligne.flux.get_absolute_url }}">{{ ligne.destination }}</a>
+              {% else %}{{ ligne.destination }}{% endif %}
+            </td>
+            <td>
+              {% for adresse in ligne.adresses_destination %}<code>{{ adresse }}</code><br>{% empty %}{{ ''|placeholder }}{% endfor %}
+            </td>
+            <td>
+              {% for nom in ligne.dns %}{{ nom }}<br>{% empty %}{{ ''|placeholder }}{% endfor %}
+            </td>
+            <td>{% if ligne.ports %}<code>{{ ligne.ports }}</code>{% else %}{{ ''|placeholder }}{% endif %}</td>
+            <td><span class="badge text-bg-{{ ligne.couleur|default:'secondary' }}">{{ ligne.etat }}</span></td>
+            <td>
+              {{ ligne.justification|placeholder }}
+              {% if ligne.alerte %}<br><small class="text-danger">{{ ligne.alerte }}</small>{% endif %}
+            </td>
+            <td>{{ ligne.reference|placeholder }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="card-body text-muted">
+      Aucun flux, et rien à déduire : ni service exposé, ni diffusion externe déclarée.
+    </div>
+  {% endif %}
+</div>

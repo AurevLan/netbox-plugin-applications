@@ -196,3 +196,70 @@ class DeploymentSerializer(NetBoxModelSerializer):
             "last_updated",
         )
         brief_fields = ("id", "url", "display", "application", "environment")
+
+
+class FlowSerializer(NetBoxModelSerializer):
+    """Le flux tel que l'API le rend.
+
+    LES EXTRÉMITÉS SONT RENDUES RÉSOLUES, en plus de leur référence : un
+    consommateur qui alimente un pare-feu (ADR-0007 du dépôt d'infrastructure) a
+    besoin des ADRESSES, pas d'un identifiant de type de contenu. Les calculer
+    côté serveur évite que chaque consommateur réimplémente la résolution — et
+    se trompe différemment.
+    """
+
+    url = serializers.HyperlinkedIdentityField(view_name="plugins-api:netbox_applications-api:flow-detail")
+    deployment = DeploymentSerializer(nested=True, read_only=True)
+    source = serializers.SerializerMethodField(read_only=True)
+    destination = serializers.SerializerMethodField(read_only=True)
+    # SerializerMethodField et non ListField(source=…) : DRF refuse une source
+    # qui porte le même nom que le champ, et ces trois valeurs sont des
+    # propriétés calculées, non des colonnes.
+    mappings = serializers.SerializerMethodField(read_only=True)
+    adresses_source = serializers.SerializerMethodField(read_only=True)
+    adresses_destination = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = models.Flow
+        fields = (
+            "id",
+            "url",
+            "display",
+            "deployment",
+            "source_type",
+            "source_id",
+            "source",
+            "destination_type",
+            "destination_id",
+            "destination",
+            "service",
+            "port_mappings",
+            "mappings",
+            "adresses_source",
+            "adresses_destination",
+            "status",
+            "justification",
+            "firewall_reference",
+            "description",
+            "comments",
+            "tags",
+            "custom_fields",
+            "created",
+            "last_updated",
+        )
+        brief_fields = ("id", "url", "display", "status")
+
+    def get_source(self, obj):
+        return str(obj.source) if obj.source else None
+
+    def get_destination(self, obj):
+        return str(obj.destination) if obj.destination else None
+
+    def get_mappings(self, obj):
+        return obj.mappings
+
+    def get_adresses_source(self, obj):
+        return obj.adresses_source
+
+    def get_adresses_destination(self, obj):
+        return obj.adresses_destination

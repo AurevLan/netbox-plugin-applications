@@ -1,0 +1,70 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+
+{% block content %}
+<div class="row">
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Flux</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Application</th><td>{{ object.deployment.application|linkify }}</td></tr>
+        <tr><th scope="row">Environnement</th>
+            <td>{% include "netbox_applications/inc/reference.html" with ref=object.deployment.environment %}</td></tr>
+        <tr><th scope="row">Déploiement</th><td>{{ object.deployment|linkify }}</td></tr>
+        <tr><th scope="row">État</th>
+            <td><span class="badge text-bg-{{ object.get_status_color }}">{{ object.get_status_display }}</span></td></tr>
+        <tr><th scope="row">Justification</th><td>{{ object.justification|placeholder }}</td></tr>
+        <tr><th scope="row">Référence sur le pare-feu</th><td>{{ object.firewall_reference|placeholder }}</td></tr>
+        <tr><th scope="row">Description</th><td>{{ object.description|placeholder }}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Ce qui passe</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Service NetBox</th><td>{{ object.service|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Protocole/port</th>
+            <td>{% if object.ports_lisibles %}<code>{{ object.ports_lisibles }}</code>{% else %}{{ ''|placeholder }}{% endif %}</td></tr>
+      </table>
+      {% if object.service %}
+        <div class="card-footer text-muted">
+          Protocole et ports viennent du service NetBox : ils ne sont pas recopiés ici,
+          pour qu'il n'y ait qu'une seule vérité.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Source</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Objet</th><td>{{ object.source|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Type</th><td>{{ object.source_type }}</td></tr>
+        <tr><th scope="row">Adresses</th>
+            <td>{% for adresse in object.adresses_source %}<code>{{ adresse }}</code><br>{% empty %}{{ ''|placeholder }}{% endfor %}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Destination</h2>
+      <table class="table table-hover attr-table">
+        <tr><th scope="row">Objet</th><td>{{ object.destination|linkify|placeholder }}</td></tr>
+        <tr><th scope="row">Type</th><td>{{ object.destination_type }}</td></tr>
+        <tr><th scope="row">Adresses</th>
+            <td>{% for adresse in object.adresses_destination %}<code>{{ adresse }}</code><br>{% empty %}{{ ''|placeholder }}{% endfor %}</td></tr>
+        <tr><th scope="row">DNS</th>
+            <td>{% for nom in object.dns_destination %}{{ nom }}<br>{% empty %}{{ ''|placeholder }}{% endfor %}</td></tr>
+      </table>
+      <div class="card-footer text-muted">
+        Les adresses sont résolues à l'affichage, jamais stockées : les recopier dans le flux
+        les figerait au jour de la saisie.
+      </div>
+    </div>
+
+    {% include 'inc/panels/tags.html' %}
+    {% include 'inc/panels/custom_fields.html' %}
+    {% include 'inc/panels/comments.html' %}
+  </div>
+</div>
+{% endblock %}

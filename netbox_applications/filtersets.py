@@ -1,7 +1,7 @@
 import django_filters
 from django.db.models import Q
 
-from ipam.models import IPAddress
+from ipam.models import IPAddress, Service
 from netbox.filtersets import NetBoxModelFilterSet
 from tenancy.models import Contact, Tenant
 
@@ -15,6 +15,7 @@ from .models import (
     Deployment,
     DeploymentStatus,
     Environment,
+    Flow,
     LifecycleStatus,
     MaintenanceWindow,
     ServiceHours,
@@ -171,3 +172,40 @@ class VirtualServerFilterSet(NetBoxModelFilterSet):
         if not value.strip():
             return queryset
         return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))
+
+
+class FlowFilterSet(NetBoxModelFilterSet):
+    """Filtres des flux.
+
+    Les trois premiers sont la raison d'être du modèle : on cherche la matrice
+    « de cette application, dans cet environnement ». Le filtre par application
+    et par environnement traverse le déploiement, pour qu'on n'ait pas à savoir
+    lequel c'est.
+    """
+
+    deployment_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Deployment.objects.all(), field_name="deployment", label="Déploiement"
+    )
+    application_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Application.objects.all(), field_name="deployment__application", label="Application"
+    )
+    environment_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Environment.objects.all(), field_name="deployment__environment", label="Environnement"
+    )
+    service_id = django_filters.ModelMultipleChoiceFilter(
+        queryset=Service.objects.all(), field_name="service", label="Service NetBox"
+    )
+
+    class Meta:
+        model = Flow
+        fields = ("id", "status", "firewall_reference")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return queryset.filter(
+            Q(justification__icontains=value)
+            | Q(description__icontains=value)
+            | Q(firewall_reference__icontains=value)
+            | Q(deployment__application__name__icontains=value)
+        )

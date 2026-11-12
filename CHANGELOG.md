@@ -3,6 +3,47 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [0.14.0] — 2026-11-12
+
+### Ajouté — matrice de flux par application et par environnement
+
+NetBox décrivait déjà le côté **destination** d'un flux, par son objet `Service` : un protocole,
+des ports, une machine. Il ne disait rien de la **source** — et sans source, on n'a pas une
+matrice de flux, on a une liste de ports ouverts. Cette version apporte l'autre moitié.
+
+- **Nouveau modèle `Flow`.** Un flux appartient à un **déploiement**, donc à un couple
+  application et environnement : c'est ce qui permet d'obtenir la matrice d'une recette sans la
+  mélanger avec celle de sa production, alors que ce sont les mêmes services sur d'autres adresses.
+- **Les deux extrémités sont de VRAIS OBJETS NETBOX**, par référence générique : préfixe, plage
+  d'adresses, adresse, VM, équipement, serveur virtuel, ou **le déploiement d'une autre
+  application** — le flux inter-applicatif, qui ne se déduit d'aucune donnée existante.
+  Un champ texte se dédoublerait à la première faute de frappe et ne se résoudrait en aucune
+  adresse.
+- **Les adresses sont résolues à l'affichage, jamais stockées.** C'est ce qui sépare une matrice
+  lisible d'une matrice actionnable : une règle de pare-feu ne se pose pas avec « la VM
+  web-prod-01 ». Les recopier les figerait au jour de la saisie.
+- **Une seule vérité sur les ports.** Quand un objet `Service` décrit le flux, ce sont ses ports
+  qui font foi ; les saisir en plus est refusé. Le format est celui de NetBox — `tcp/443` —
+  et la lecture fonctionne aussi bien sur `port_mappings` (4.7) que sur `protocol`/`ports` (4.5).
+- **Deux onglets « Matrice de flux »**, sur le déploiement et sur l'application, avec **export CSV
+  servi par la même vue** : deux chemins distincts finiraient par montrer deux matrices
+  différentes, et c'est celle qu'on n'a pas sous les yeux qui partirait à l'équipe réseau.
+- **La matrice dit ce qui MANQUE.** Trois origines par ligne : `déclaré` (quelqu'un l'a écrit),
+  `déduit` (le modèle ne laisse pas le choix — diffusion externe, serveur virtuel, objets
+  `Service`), et **`à déclarer`** — un port exposé dont aucune source n'est connue. Une matrice
+  qui ne liste que les flux saisis est complète par construction : elle décrit ce qu'on sait déjà.
+- **API REST `/api/plugins/netbox_applications/flows/`**, qui rend les adresses **résolues** en
+  plus des références. Calculer côté serveur évite que chaque consommateur réimplémente la
+  résolution — et se trompe différemment.
+- Filtres par application, par environnement, par déploiement, par service et par état.
+  Indexation dans la recherche globale par **justification** et par **référence de règle**.
+
+### Éprouvé
+
+**135 tests** (91 auparavant), sur NetBox 4.5 et 4.7. Les sept types d'extrémité sont résolus en
+adresses dans les tests, y compris le cas d'une VM **sans adresse primaire** — celui d'une machine
+provisionnée mais pas encore configurée, c'est-à-dire celle pour laquelle on demande un flux.
+
 ## [0.13.0] — 2026-09-25
 
 ### Changé — compatibilité NetBox élargie à la 4.5

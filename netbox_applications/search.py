@@ -71,6 +71,21 @@ class VirtualServerIndex(SearchIndex):
     display_attrs = ("ip_address", "port", "description")
 
 
+class FlowIndex(SearchIndex):
+    model = models.Flow
+    category = CATALOGUE
+    # Un flux se cherche par sa JUSTIFICATION — « pourquoi ce port est-il
+    # ouvert ? » — et par la référence de la règle sur le pare-feu, qui est ce
+    # qu'on a sous les yeux quand on part de l'équipement.
+    fields = (
+        ("justification", 100),
+        ("firewall_reference", 200),
+        ("description", 500),
+        ("comments", 5000),
+    )
+    display_attrs = ("deployment", "status", "justification")
+
+
 def _index_referentiel(modele):
     """Produit l'index d'un référentiel.
 
@@ -99,10 +114,11 @@ indexes = [
     ApplicationIndex,
     DeploymentIndex,
     VirtualServerIndex,
+    FlowIndex,
     *[_index_referentiel(modele) for modele in models.REFERENCES],
 ]
 
 # Un « assert » disparaîtrait avec « python -O ». On lève explicitement.
-_attendu = len(models.REFERENCES) + 3
+_attendu = len(models.REFERENCES) + 4
 if len(indexes) != _attendu:
     raise RuntimeError(f"{len(indexes)} index déclarés pour {_attendu} modèles indexables.")

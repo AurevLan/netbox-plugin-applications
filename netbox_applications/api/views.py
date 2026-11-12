@@ -90,3 +90,11 @@ class VirtualServerViewSet(NetBoxModelViewSet):
     queryset = models.VirtualServer.objects.prefetch_related("ip_address", "tags")
     serializer_class = serializers.VirtualServerSerializer
     filterset_class = filtersets.VirtualServerFilterSet
+
+
+class FlowViewSet(NetBoxModelViewSet):
+    queryset = models.Flow.objects.select_related(
+        "deployment", "deployment__application", "deployment__environment", "service"
+    ).prefetch_related("tags")
+    serializer_class = serializers.FlowSerializer
+    filterset_class = filtersets.FlowFilterSet

@@ -24,7 +24,7 @@ from utilities.views import (
 )
 from virtualization.models import VirtualMachine
 
-from . import assistant, filtersets, forms, models, panels, tables
+from . import assistant, filtersets, forms, matrice, models, panels, tables
 
 # --- Référentiels --------------------------------------------------------------
 #
@@ -438,3 +438,117 @@ class VirtualServerDeleteView(generic.ObjectDeleteView):
 class VirtualServerBulkDeleteView(generic.BulkDeleteView):
     queryset = models.VirtualServer.objects.annotate(deployment_count=Count("deployments", distinct=True))
     table = tables.VirtualServerTable
+
+
+# --- Flux ----------------------------------------------------------------------
+
+
+@register_model_view(models.Flow)
+class FlowView(generic.ObjectView):
+    queryset = models.Flow.objects.select_related(
+        "deployment", "deployment__application", "deployment__environment", "service"
+    )
+
+
+class FlowListView(generic.ObjectListView):
+    queryset = models.Flow.objects.select_related(
+        "deployment", "deployment__application", "deployment__environment", "service"
+    )
+    table = tables.FlowTable
+    filterset = filtersets.FlowFilterSet
+    filterset_form = forms.FlowFilterForm
+
+
+class FlowEditView(generic.ObjectEditView):
+    queryset = models.Flow.objects.all()
+    form = forms.FlowForm
+
+
+class FlowDeleteView(generic.ObjectDeleteView):
+    queryset = models.Flow.objects.all()
+
+
+class FlowBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.Flow.objects.select_related("deployment", "service")
+    table = tables.FlowTable
+
+
+# --- La matrice ----------------------------------------------------------------
+#
+# DEUX ONGLETS, UN SEUL CALCUL. La matrice d'un déploiement répond à « que
+# faut-il ouvrir pour cette instance » ; celle d'une application rassemble tous
+# ses environnements et répond à « ce qui est ouvert en production est-il ouvert
+# en recette ». Le calcul vit dans « matrice.py » : ces vues ne font que
+# l'afficher et l'exporter.
+
+
+class _MatriceMixin:
+    """L'affichage commun aux deux onglets de matrice, et son export CSV."""
+
+    nom_fichier = "matrice"
+
+    def lignes_de(self, objet):
+        raise NotImplementedError
+
+    def get(self, request, *args, **kwargs):
+        # L'export est servi par la MÊME vue que l'affichage, donc par le même
+        # calcul. Deux chemins distincts finiraient par montrer deux matrices
+        # différentes — et c'est celle qu'on n'a pas sous les yeux qui partirait
+        # à l'équipe réseau.
+        if request.GET.get("export") == "csv":
+            objet = self.get_object(**kwargs)
+            contenu = matrice.en_csv(self.lignes_de(objet))
+            reponse = HttpResponse(contenu, content_type="text/csv; charset=utf-8")
+            nom = f"{self.nom_fichier}-{objet.pk}.csv"
+            reponse["Content-Disposition"] = f'attachment; filename="{nom}"'
+            return reponse
+        return super().get(request, *args, **kwargs)
+
+    def get_extra_context(self, request, instance):
+        lignes = self.lignes_de(instance)
+        return {
+            "lignes": lignes,
+            "resume": matrice.compte_par_origine(lignes),
+            "colonnes_csv": matrice.COLONNES,
+        }
+
+
+@register_model_view(models.Deployment, "matrice")
+class DeploymentMatrixView(_MatriceMixin, generic.ObjectView):
+    """Onglet « Matrice de flux » sur la fiche d'un déploiement."""
+
+    queryset = models.Deployment.objects.select_related("application", "environment", "waf_virtual_server")
+    template_name = "netbox_applications/deployment_matrice.html"
+    nom_fichier = "matrice-flux-deploiement"
+    tab = ViewTab(
+        label="Matrice de flux",
+        badge=lambda obj: obj.flows.count(),
+        permission="netbox_applications.view_flow",
+    )
+
+    def lignes_de(self, objet):
+        return matrice.matrice_du_deploiement(objet)
+
+
+@register_model_view(models.Application, "matrice")
+class ApplicationMatrixView(_MatriceMixin, generic.ObjectView):
+    """Onglet « Matrice de flux » sur la fiche d'une application, tous environnements."""
+
+    queryset = models.Application.objects.all()
+    template_name = "netbox_applications/application_matrice.html"
+    nom_fichier = "matrice-flux-application"
+    tab = ViewTab(
+        label="Matrice de flux",
+        badge=lambda obj: models.Flow.objects.filter(deployment__application=obj).count(),
+        permission="netbox_applications.view_flow",
+    )
+
+    def lignes_de(self, objet):
+        return matrice.matrice_de_l_application(objet)
+
+    def get_extra_context(self, request, instance):
+        # Une matrice d'application couvre plusieurs environnements : sans cette
+        # colonne, deux lignes identiques en recette et en production seraient
+        # indiscernables, et c'est justement leur comparaison qu'on vient
+        # chercher ici.
+        return {**super().get_extra_context(request, instance), "avec_environnement": True}

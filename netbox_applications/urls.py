@@ -62,6 +62,14 @@ urlpatterns = [
         name="virtualserver_delete",
     ),
     path("virtualserver/<int:pk>/", include(get_model_urls("netbox_applications", "virtualserver"))),
+    # Flux
+    path("flow/", views.FlowListView.as_view(), name="flow_list"),
+    path("flow/add/", views.FlowEditView.as_view(), name="flow_add"),
+    path("flow/delete/", views.FlowBulkDeleteView.as_view(), name="flow_bulk_delete"),
+    path("flow/<int:pk>/", views.FlowView.as_view(), name="flow"),
+    path("flow/<int:pk>/edit/", views.FlowEditView.as_view(), name="flow_edit"),
+    path("flow/<int:pk>/delete/", views.FlowDeleteView.as_view(), name="flow_delete"),
+    path("flow/<int:pk>/", include(get_model_urls("netbox_applications", "flow"))),
     # Applications
     path("applications/", views.ApplicationListView.as_view(), name="application_list"),
     path("applications/add/", views.ApplicationEditView.as_view(), name="application_add"),

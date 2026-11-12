@@ -1,0 +1,11 @@
+{% extends 'generic/object.html' %}
+
+{% block content %}
+<div class="row">
+  <div class="col col-md-12">
+    {# Tous les environnements de l'application, dans l'ordre du référentiel. #}
+    {# Comparer production et recette est précisément ce qu'on vient chercher. #}
+    {% include "netbox_applications/inc/matrice.html" %}
+  </div>
+</div>
+{% endblock %}

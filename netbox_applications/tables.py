@@ -12,6 +12,7 @@ from .models import (
     Deployment,
     DeploymentStatus,
     Environment,
+    Flow,
     LifecycleStatus,
     MaintenanceWindow,
     ServiceHours,
@@ -299,3 +300,74 @@ class VirtualServerTable(NetBoxTable):
             "last_updated",
         )
         default_columns = ("name", "ip_address", "port", "prefix", "deployment_count", "description")
+
+
+# --- Flux ----------------------------------------------------------------------
+
+
+class FlowTable(NetBoxTable):
+    """Les flux, vus comme une liste. La MATRICE est un autre affichage.
+
+    Cette table sert à chercher et à corriger un flux parmi tous ; la matrice
+    (`matrice.py`) sert à lire ceux d'un déploiement, avec ce qui en découle et
+    ce qui manque. Deux besoins, deux vues : une seule table essayant de servir
+    les deux ne servirait bien ni l'un ni l'autre.
+    """
+
+    deployment = tables.Column(linkify=True, verbose_name="Déploiement")
+    application = tables.Column(accessor="deployment__application", linkify=True, verbose_name="Application")
+    environment = tables.Column(
+        accessor="deployment__environment", linkify=True, verbose_name="Environnement"
+    )
+    libelle_source = tables.Column(accessor="libelle_source", orderable=False, verbose_name="Source")
+    libelle_destination = tables.Column(
+        accessor="libelle_destination", orderable=False, verbose_name="Destination"
+    )
+    ports_lisibles = tables.Column(accessor="ports_lisibles", orderable=False, verbose_name="Protocole/port")
+    service = tables.Column(linkify=True, verbose_name="Service NetBox")
+    status = columns.ChoiceFieldColumn(verbose_name="État")
+    tags = columns.TagColumn(url_name="plugins:netbox_applications:flow_list")
+
+    class Meta(NetBoxTable.Meta):
+        model = Flow
+        fields = (
+            "pk",
+            "id",
+            "application",
+            "environment",
+            "deployment",
+            "libelle_source",
+            "libelle_destination",
+            "ports_lisibles",
+            "service",
+            "status",
+            "justification",
+            "firewall_reference",
+            "description",
+            "tags",
+            "created",
+            "last_updated",
+        )
+        default_columns = (
+            "application",
+            "environment",
+            "libelle_source",
+            "libelle_destination",
+            "ports_lisibles",
+            "status",
+            "justification",
+        )
+
+
+class FlowsOnDeploymentTable(FlowTable):
+    """Les flux d'un déploiement : son application et son environnement sont connus."""
+
+    class Meta(FlowTable.Meta):
+        default_columns = (
+            "libelle_source",
+            "libelle_destination",
+            "ports_lisibles",
+            "status",
+            "justification",
+            "firewall_reference",
+        )

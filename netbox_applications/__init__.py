@@ -8,9 +8,10 @@ class ApplicationsConfig(PluginConfig):
     verbose_name = "Applications"
     description = (
         "Fiche applicative au sens CMDB : client, criticité, engagements de continuité, "
-        "déploiements par environnement, machines et pare-feu applicatif."
+        "déploiements par environnement, machines, pare-feu applicatif et "
+        "matrice de flux par application et par environnement."
     )
-    version = "0.13.0"
+    version = "0.14.0"
     author = "Aurelien"
     base_url = "applications"
     # Plancher ÉPROUVÉ, pas supposé : la suite complète a été exécutée sur

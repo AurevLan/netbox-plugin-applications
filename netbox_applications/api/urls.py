@@ -9,6 +9,7 @@ router = NetBoxRouter()
 router.register("applications", views.ApplicationViewSet)
 router.register("deployments", views.DeploymentViewSet)
 router.register("virtual-servers", views.VirtualServerViewSet)
+router.register("flows", views.FlowViewSet)
 
 # Référentiels — le chemin suit le nom du modèle en minuscules, comme les URL
 # de l'interface, pour qu'une même convention serve partout.

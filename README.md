@@ -38,6 +38,73 @@ Porter les VM ou la plage de maintenance sur l'application supposerait que produ
 partagent les mêmes. L'erreur ne se voit pas à la saisie — elle se découvre le jour où l'on
 interrompt la production en croyant toucher la recette.
 
+### La matrice de flux
+
+NetBox décrit déjà très bien le côté **destination** d'un flux, par son objet `Service` : un nom,
+un protocole, des ports, rattachés à une machine. **Il ne dit rien de la source** — et sans source,
+on n'a pas une matrice de flux, on a une liste de ports ouverts.
+
+Le modèle `Flow` apporte l'autre moitié, et rien de plus : il n'invente ni adresse, ni service, ni
+zone.
+
+```
+Déploiement « Portail RH / Production »
+  Origine      Source               Destination          Ports      État
+  déclaré      10.70.0.0/24         web-prod-01          tcp/8443   ouvert
+  déduit       Internet             vs-portail-rh        tcp/443    impliqué par le modèle
+  déduit       vs-portail-rh        https-interne        tcp/8443   impliqué par le modèle
+  à déclarer   (source inconnue)    postgres             tcp/5432   à compléter
+```
+
+**Les deux extrémités sont de vrais objets NetBox**, désignés par référence générique :
+
+| Extrémité possible | Ce qu'elle sert à exprimer |
+|---|---|
+| Préfixe, plage d'adresses | un segment, une plage — la forme d'une « zone » |
+| Adresse IP | un hôte précis, et il porte son nom DNS |
+| VM, équipement | une machine du parc, sans avoir à nommer son adresse |
+| Serveur virtuel | le point d'entrée devant une instance |
+| **Déploiement d'une autre application** | le flux inter-applicatif, qui ne se déduit de rien |
+
+Un champ texte aurait semblé plus simple. Il se dédouble à la première faute de frappe — « LAN
+admin », « lan-admin » et « Postes admin » deviennent trois sources là où il n'y en a qu'une — et
+surtout il **ne se résout en aucune adresse** : il faudrait qu'un humain traduise chaque ligne
+avant de toucher au pare-feu.
+
+#### Trois propriétés qui font la différence
+
+**Les adresses sont résolues à l'affichage, jamais stockées.** C'est ce qui sépare une matrice
+lisible d'une matrice actionnable. Les recopier dans le flux les figerait au jour de la saisie ;
+résolues, elles suivent le redécoupage du réseau et le changement de parc d'une application.
+
+**Une seule vérité sur les ports.** Quand un objet `Service` décrit le flux, ce sont ses ports qui
+font foi, et les saisir en plus est **refusé**. Le format est celui de NetBox — `tcp/443`.
+
+**La matrice dit ce qui manque.** Chaque ligne porte son origine :
+
+| Origine | Sens |
+|---|---|
+| `déclaré` | un flux saisi, daté, justifié |
+| `déduit` | le modèle ne laisse pas le choix : diffusion externe, serveur virtuel, objet `Service` |
+| **`à déclarer`** | **un port exposé dont aucune source n'est connue** |
+
+La troisième est la raison d'être de la matrice. Une matrice qui ne liste que les flux déclarés est
+toujours complète par construction : elle décrit ce qu'on sait déjà. Celle-ci peut dire « il vous
+manque ceci », et c'est la seule forme qui serve à quelque chose lors d'une revue.
+
+#### Où la lire
+
+| Emplacement | Ce qu'il répond |
+|---|---|
+| Onglet sur un **déploiement** | que faut-il ouvrir pour cette instance ? |
+| Onglet sur une **application** | ce qui est ouvert en production l'est-il en recette ? |
+| **Export CSV** sur chaque onglet | ce qu'on envoie à l'équipe réseau |
+| `GET /api/plugins/netbox_applications/flows/` | de quoi alimenter un pare-feu, adresses résolues |
+
+L'export est servi par **la même vue** que l'affichage, donc par le même calcul : deux chemins
+distincts finiraient par montrer deux matrices différentes, et c'est celle qu'on n'a pas sous les
+yeux qui partirait à l'équipe réseau.
+
 ### Champs de la fiche
 
 **Application** — ce qui est vrai quel que soit l'environnement :

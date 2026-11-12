@@ -3,9 +3,11 @@
 reference.py      les référentiels — listes de valeurs gérées dans l'interface
 application.py    la fiche applicative et ses déploiements
 virtualserver.py  le point d'entrée réseau devant une instance
+flow.py           les flux autorisés — qui atteint quoi, pour un déploiement
 """
 
 from .application import Application, Deployment
+from .flow import Flow
 from .reference import (
     RPO,
     RTO,
@@ -30,6 +32,7 @@ __all__ = (
     "Deployment",
     "DeploymentStatus",
     "Environment",
+    "Flow",
     "LifecycleStatus",
     "MaintenanceWindow",
     "ServiceHours",

@@ -1,6 +1,8 @@
 from django import forms
+from django.contrib.contenttypes.models import ContentType
 
-from ipam.models import IPAddress
+from dcim.models import Device
+from ipam.models import IPAddress, IPRange, Prefix, Service
 from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
 from tenancy.models import Contact, Tenant
 from utilities.forms.fields import (
@@ -10,8 +12,10 @@ from utilities.forms.fields import (
     SlugField,
 )
 from utilities.forms.rendering import FieldSet
+from utilities.forms.widgets import APISelectMultiple
 from virtualization.models import VirtualMachine
 
+from .choices import FlowStatusChoices
 from .models import (
     RPO,
     RTO,
@@ -22,6 +26,7 @@ from .models import (
     Deployment,
     DeploymentStatus,
     Environment,
+    Flow,
     LifecycleStatus,
     MaintenanceWindow,
     ServiceHours,
@@ -373,3 +378,183 @@ class VirtualServerFilterForm(NetBoxModelFilterSetForm):
         queryset=IPAddress.objects.all(), required=False, label="Adresse IP"
     )
     port = forms.IntegerField(required=False, label="Port")
+
+
+# --- Flux ----------------------------------------------------------------------
+#
+# LES EXTRÉMITÉS SONT SAISIES PAR TYPE, un champ par type d'objet.
+#
+# L'alternative aurait été un sélecteur de type suivi d'un identifiant
+# numérique. Elle tient en deux champs, et elle est inutilisable : personne ne
+# connaît l'identifiant interne d'un préfixe, et une erreur d'un chiffre
+# désigne silencieusement un autre réseau. Sept champs facultatifs dont un seul
+# se remplit coûtent de la place dans le formulaire, et rien d'autre.
+
+# (suffixe du champ, modèle, libellé)
+EXTREMITES_SAISIE = (
+    ("prefix", Prefix, "Préfixe"),
+    ("ip_range", IPRange, "Plage d'adresses"),
+    ("ip_address", IPAddress, "Adresse IP"),
+    ("virtual_machine", VirtualMachine, "VM"),
+    ("device", Device, "Équipement"),
+    ("virtual_server", VirtualServer, "Serveur virtuel"),
+    ("deployment", Deployment, "Déploiement d'une autre application"),
+)
+
+
+def _champ_extremite(modele, libelle):
+    return DynamicModelChoiceField(queryset=modele.objects.all(), required=False, label=libelle)
+
+
+class FlowForm(NetBoxModelForm):
+    deployment = DynamicModelChoiceField(queryset=Deployment.objects.all(), label="Déploiement")
+
+    source_prefix = _champ_extremite(Prefix, "Préfixe")
+    source_ip_range = _champ_extremite(IPRange, "Plage d'adresses")
+    source_ip_address = _champ_extremite(IPAddress, "Adresse IP")
+    source_virtual_machine = _champ_extremite(VirtualMachine, "VM")
+    source_device = _champ_extremite(Device, "Équipement")
+    source_virtual_server = _champ_extremite(VirtualServer, "Serveur virtuel")
+    source_deployment = _champ_extremite(Deployment, "Déploiement d'une autre application")
+
+    destination_prefix = _champ_extremite(Prefix, "Préfixe")
+    destination_ip_range = _champ_extremite(IPRange, "Plage d'adresses")
+    destination_ip_address = _champ_extremite(IPAddress, "Adresse IP")
+    destination_virtual_machine = _champ_extremite(VirtualMachine, "VM")
+    destination_device = _champ_extremite(Device, "Équipement")
+    destination_virtual_server = _champ_extremite(VirtualServer, "Serveur virtuel")
+    destination_deployment = _champ_extremite(Deployment, "Déploiement d'une autre application")
+
+    service = DynamicModelChoiceField(
+        queryset=Service.objects.all(),
+        required=False,
+        label="Service NetBox",
+        help_text="S'il est renseigné, protocole et ports viennent de lui.",
+    )
+    port_mappings = forms.CharField(
+        required=False,
+        label="Protocole/port",
+        help_text=(
+            "Séparés par des virgules, par exemple « tcp/443, tcp/8443 ». "
+            "À laisser vide si un service NetBox est choisi."
+        ),
+    )
+    comments = CommentField()
+
+    fieldsets = (
+        FieldSet("deployment", "status", "justification", name="Flux"),
+        FieldSet(
+            "source_prefix",
+            "source_ip_range",
+            "source_ip_address",
+            "source_virtual_machine",
+            "source_device",
+            "source_virtual_server",
+            "source_deployment",
+            name="Source — un seul champ",
+        ),
+        FieldSet(
+            "destination_prefix",
+            "destination_ip_range",
+            "destination_ip_address",
+            "destination_virtual_machine",
+            "destination_device",
+            "destination_virtual_server",
+            "destination_deployment",
+            name="Destination — un seul champ",
+        ),
+        FieldSet("service", "port_mappings", name="Ce qui passe"),
+        FieldSet("firewall_reference", "description", "tags", name="Suivi"),
+    )
+
+    class Meta:
+        model = Flow
+        fields = (
+            "deployment",
+            "service",
+            "status",
+            "justification",
+            "firewall_reference",
+            "description",
+            "comments",
+            "tags",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # À la modification, repeupler le bon champ parmi les sept. Sans cela, le
+        # formulaire s'ouvrirait vide et un simple enregistrement effacerait
+        # l'extrémité existante.
+        instance = self.instance
+        if instance and instance.pk:
+            for cote in ("source", "destination"):
+                objet = getattr(instance, cote, None)
+                if objet is None:
+                    continue
+                for suffixe, modele, _libelle in EXTREMITES_SAISIE:
+                    if isinstance(objet, modele):
+                        self.initial[f"{cote}_{suffixe}"] = objet.pk
+                        break
+            self.initial["port_mappings"] = ", ".join(instance.port_mappings or [])
+
+    def _extremite(self, cote):
+        """L'unique objet saisi pour ce côté, ou une erreur explicite."""
+        remplis = [
+            (suffixe, self.cleaned_data.get(f"{cote}_{suffixe}"))
+            for suffixe, _modele, _libelle in EXTREMITES_SAISIE
+            if self.cleaned_data.get(f"{cote}_{suffixe}")
+        ]
+        if not remplis:
+            raise forms.ValidationError("Indiquer exactement un objet.")
+        if len(remplis) > 1:
+            noms = ", ".join(suffixe for suffixe, _ in remplis)
+            raise forms.ValidationError(f"Un seul objet attendu, {len(remplis)} fournis : {noms}.")
+        return remplis[0][1]
+
+    def clean(self):
+        super().clean()
+        erreurs = {}
+
+        for cote in ("source", "destination"):
+            try:
+                objet = self._extremite(cote)
+            except forms.ValidationError as erreur:
+                # L'erreur est portée par le PREMIER champ du groupe : NetBox
+                # n'affiche pas les erreurs sans champ dans un formulaire en
+                # jeux de champs, et elle passerait inaperçue.
+                erreurs[f"{cote}_{EXTREMITES_SAISIE[0][0]}"] = erreur.messages
+                continue
+            setattr(self.instance, f"{cote}_type", ContentType.objects.get_for_model(objet))
+            setattr(self.instance, f"{cote}_id", objet.pk)
+
+        brut = (self.cleaned_data.get("port_mappings") or "").strip()
+        self.instance.port_mappings = [morceau.strip() for morceau in brut.split(",") if morceau.strip()]
+
+        if erreurs:
+            raise forms.ValidationError(erreurs)
+        return self.cleaned_data
+
+
+class FlowFilterForm(NetBoxModelFilterSetForm):
+    model = Flow
+    fieldsets = (
+        FieldSet("q", "filter_id", "tag"),
+        FieldSet("deployment_id", "application_id", "environment_id", name="Périmètre"),
+        FieldSet("status", "service_id", name="Flux"),
+    )
+
+    deployment_id = DynamicModelMultipleChoiceField(
+        queryset=Deployment.objects.all(), required=False, label="Déploiement"
+    )
+    application_id = DynamicModelMultipleChoiceField(
+        queryset=Application.objects.all(), required=False, label="Application"
+    )
+    environment_id = DynamicModelMultipleChoiceField(
+        queryset=Environment.objects.all(), required=False, label="Environnement"
+    )
+    service_id = DynamicModelMultipleChoiceField(
+        queryset=Service.objects.all(), required=False, label="Service NetBox"
+    )
+    status = forms.MultipleChoiceField(
+        choices=FlowStatusChoices, required=False, label="État", widget=APISelectMultiple()
+    )
