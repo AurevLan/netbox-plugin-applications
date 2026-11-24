@@ -1,0 +1,50 @@
+{% load helpers %}
+{# Résumé de matrice, posé sur une FICHE et non dans l'onglet. #}
+{# Ce qui remonte ici est le MANQUE : le détail reste dans l'onglet. #}
+
+<div class="card">
+  <h2 class="card-header">
+    Matrice de flux
+    <div class="card-actions">
+      <a href="matrice/" class="btn btn-sm btn-outline-primary">Ouvrir la matrice</a>
+    </div>
+  </h2>
+  <div class="card-body">
+    <p class="mb-2">
+      <span class="badge text-bg-green">{{ resume_flux.en_vigueur }} ouvert{{ resume_flux.en_vigueur|pluralize }}</span>
+      <span class="badge text-bg-secondary">{{ resume_flux.declare }} déclaré{{ resume_flux.declare|pluralize }}</span>
+      <span class="badge text-bg-cyan">{{ resume_flux.deduit }} déduit{{ resume_flux.deduit|pluralize }}</span>
+      {% if resume_flux.a_declarer %}
+        <span class="badge text-bg-red">{{ resume_flux.a_declarer }} à déclarer</span>
+      {% endif %}
+    </p>
+
+    {% if flux_a_declarer %}
+      <div class="alert alert-warning py-2 mb-0">
+        <strong>Ports exposés sans source déclarée :</strong>
+        <ul class="mb-1 mt-1">
+          {% for ligne in flux_a_declarer %}
+            <li>
+              {{ ligne.destination }}
+              {% if ligne.ports %}<code>{{ ligne.ports }}</code>{% endif %}
+              {% if ligne.deploiement.environment %}
+                <small class="text-muted">— {{ ligne.deploiement.environment }}</small>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+        <div class="small">
+          C'est ce qui manque à la matrice, et non une anomalie du réseau.
+        </div>
+      </div>
+    {% elif resume_flux.total %}
+      <p class="text-muted mb-0">
+        Chaque service exposé est couvert par un flux déclaré.
+      </p>
+    {% else %}
+      <p class="text-muted mb-0">
+        Aucun flux, et rien à déduire : ni service exposé, ni diffusion externe déclarée.
+      </p>
+    {% endif %}
+  </div>
+</div>

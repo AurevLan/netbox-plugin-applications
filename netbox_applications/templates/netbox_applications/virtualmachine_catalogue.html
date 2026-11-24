@@ -1,0 +1,97 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+
+{% block content %}
+<div class="row">
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">À quoi sert cette machine
+        <span class="badge text-bg-secondary">{{ deploiements|length }}</span></h2>
+      {% if deploiements %}
+        <table class="table table-hover attr-table">
+          <thead>
+            <tr><th>Application</th><th>Environnement</th><th>État</th><th>Matrice</th></tr>
+          </thead>
+          <tbody>
+            {% for deploiement in deploiements %}
+              <tr>
+                <td>{{ deploiement.application|linkify }}</td>
+                <td>{% include "netbox_applications/inc/reference.html" with ref=deploiement.environment %}</td>
+                <td>{% include "netbox_applications/inc/reference.html" with ref=deploiement.status %}</td>
+                <td><a href="{{ deploiement.get_absolute_url }}matrice/">Matrice de flux</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="card-body">
+          <p class="text-muted mb-0">
+            Cette machine n'est rattachée à <strong>aucun déploiement</strong>. En incident,
+            « elle sert à quoi ? » restera donc sans réponse. Le rattachement se déclare depuis
+            le déploiement concerné.
+          </p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2 class="card-header">Services exposés sans source déclarée
+        {% if services_sans_source %}
+          <span class="badge text-bg-red">{{ services_sans_source|length }}</span>
+        {% else %}
+          <span class="badge text-bg-green">0</span>
+        {% endif %}
+      </h2>
+      {% if services_sans_source %}
+        <table class="table table-hover attr-table">
+          {% for service in services_sans_source %}
+            <tr><td>{{ service|linkify }}</td><td>{{ service.description|placeholder }}</td></tr>
+          {% endfor %}
+        </table>
+        <div class="card-footer text-warning">
+          Ces ports sont ouverts et <strong>aucun flux ne dit depuis où on les atteint</strong>.
+          C'est ce qui manque à la matrice, pas une anomalie du réseau.
+        </div>
+      {% else %}
+        <div class="card-body text-muted">
+          Chaque service exposé par cette machine est couvert par un flux déclaré.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col col-md-6">
+    <div class="card">
+      <h2 class="card-header">Qui a le droit de lui parler
+        <span class="badge text-bg-secondary">{{ flux|length }}</span></h2>
+      {% if flux %}
+        <table class="table table-hover">
+          <thead>
+            <tr><th>Source</th><th>Destination</th><th>Ports</th><th>État</th><th>Pourquoi ici</th></tr>
+          </thead>
+          <tbody>
+            {% for ligne in flux %}
+              <tr>
+                <td>{{ ligne.0.libelle_source }}</td>
+                <td><a href="{{ ligne.0.get_absolute_url }}">{{ ligne.0.libelle_destination }}</a></td>
+                <td>{% if ligne.0.ports_lisibles %}<code>{{ ligne.0.ports_lisibles }}</code>{% else %}{{ ''|placeholder }}{% endif %}</td>
+                <td><span class="badge text-bg-{{ ligne.0.get_status_color }}">{{ ligne.0.get_status_display }}</span></td>
+                <td><small class="text-muted">{{ ligne.1 }}</small></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="card-footer text-muted">
+          Un flux peut concerner cette machine de trois façons : elle en est une extrémité, elle
+          porte le service visé, ou le flux est déclaré au niveau de son déploiement — un flux
+          inter-applicatif ne nomme pas les machines, il nomme l'application.
+        </div>
+      {% else %}
+        <div class="card-body text-muted">
+          Aucun flux déclaré ne concerne cette machine.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

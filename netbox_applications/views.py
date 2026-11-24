@@ -345,6 +345,19 @@ class AssistantView(ObjectPermissionRequiredMixin, View):
 class ApplicationView(generic.ObjectView):
     queryset = models.Application.objects.all()
 
+    # LA MATRICE EST RÉSUMÉE SUR LA FICHE, pas seulement dans son onglet.
+    #
+    # Un onglet ne se visite que si l'on sait qu'il existe et qu'on a une raison
+    # d'y aller. Le chiffre qui compte — « trois ports exposés sans source
+    # connue » — doit se voir en ouvrant l'application, sinon il ne sera lu par
+    # personne. Le détail reste dans l'onglet ; c'est le MANQUE qui remonte ici.
+    def get_extra_context(self, request, instance):
+        lignes = matrice.matrice_de_l_application(instance)
+        return {
+            "resume_flux": matrice.compte_par_origine(lignes),
+            "flux_a_declarer": [ligne for ligne in lignes if ligne.manque],
+        }
+
 
 @register_model_view(models.Application, "deployments")
 class ApplicationDeploymentsView(generic.ObjectChildrenView):
@@ -405,6 +418,13 @@ class ApplicationBulkDeleteView(generic.BulkDeleteView):
 
 class DeploymentView(generic.ObjectView):
     queryset = models.Deployment.objects.all()
+
+    def get_extra_context(self, request, instance):
+        lignes = matrice.matrice_du_deploiement(instance)
+        return {
+            "resume_flux": matrice.compte_par_origine(lignes),
+            "flux_a_declarer": [ligne for ligne in lignes if ligne.manque],
+        }
 
 
 class DeploymentListView(generic.ObjectListView):
@@ -569,3 +589,37 @@ class ApplicationMatrixView(_MatriceMixin, generic.ObjectView):
         # indiscernables, et c'est justement leur comparaison qu'on vient
         # chercher ici.
         return {**super().get_extra_context(request, instance), "avec_environnement": True}
+
+
+# --- La machine virtuelle, vue depuis le catalogue -----------------------------
+#
+# POURQUOI UN ONGLET SUR UN MODÈLE QUI N'EST PAS LE NÔTRE.
+#
+# On ne part pas toujours de l'application. En incident, on part de la MACHINE :
+# « celle-ci sert à quoi, et qui a le droit de lui parler ? » Sans cet onglet, la
+# réponse existait dans le catalogue sans être atteignable depuis l'endroit où on
+# se pose la question — et c'est le défaut récurrent de ce projet : un mécanisme
+# correct dont l'effet n'atteint pas son destinataire.
+#
+# C'est aussi l'ADR-0018 tenu DES DEUX CÔTÉS : le rattachement machine ↔
+# déploiement se voyait depuis le déploiement, et nulle part depuis la machine.
+
+
+@register_model_view(VirtualMachine, "catalogue")
+class VirtualMachineCatalogueView(generic.ObjectView):
+    """Onglet « Catalogue » sur une machine virtuelle : ses applications, ses flux."""
+
+    queryset = VirtualMachine.objects.all()
+    template_name = "netbox_applications/virtualmachine_catalogue.html"
+    tab = ViewTab(
+        label="Catalogue",
+        badge=lambda obj: obj.deployments.count() + len(matrice.flux_de_la_machine(obj)),
+        permission="netbox_applications.view_application",
+    )
+
+    def get_extra_context(self, request, instance):
+        return {
+            "deploiements": instance.deployments.select_related("application", "environment", "status"),
+            "flux": matrice.flux_de_la_machine(instance),
+            "services_sans_source": matrice.services_sans_source(instance),
+        }

@@ -28,6 +28,8 @@ import csv
 import io
 from dataclasses import dataclass
 
+from django.db import models
+
 from .choices import FlowStatusChoices
 from .models.flow import adresses_de, mappings_du_service, noms_dns_de
 
@@ -197,6 +199,75 @@ def matrice_du_deploiement(deploiement):
         )
 
     return lignes
+
+
+def flux_de_la_machine(machine):
+    """Les flux déclarés qui concernent cette machine, et POURQUOI.
+
+    TROIS FAÇONS D'ÊTRE CONCERNÉ, et une seule est évidente :
+
+      1. la machine est elle-même une extrémité du flux ;
+      2. la destination est un objet « Service » PORTÉ par cette machine —
+         le cas le plus fréquent, puisque c'est le service qui décrit l'écoute ;
+      3. l'extrémité est un DÉPLOIEMENT auquel la machine appartient — un flux
+         inter-applicatif ne nomme pas les machines, il nomme l'application.
+
+    Ne traiter que le premier cas donnerait une page presque toujours vide, qui
+    laisserait croire qu'aucun flux ne touche la machine. C'est pire qu'une page
+    absente : elle répond à côté sans le dire.
+
+    LES TROIS MOTIFS SE RECOUVRENT, et l'ordre ci-dessus est leur PRIORITÉ : un
+    flux dont la destination est le déploiement ET dont le service est porté par
+    cette machine est annoncé « porte le service … », qui est le motif le plus
+    précis des deux. Afficher le plus vague ferait chercher longtemps pourquoi
+    le flux apparaît là.
+    """
+    from django.contrib.contenttypes.models import ContentType
+
+    from .models.flow import Flow
+
+    ct_machine = ContentType.objects.get_for_model(machine)
+    ct_deploiement = ContentType.objects.get_by_natural_key("netbox_applications", "deployment")
+    deploiements = list(machine.deployments.values_list("pk", flat=True))
+    services = list(machine.services.values_list("pk", flat=True))
+
+    concernes = Flow.objects.filter(
+        models.Q(source_type=ct_machine, source_id=machine.pk)
+        | models.Q(destination_type=ct_machine, destination_id=machine.pk)
+        | models.Q(service_id__in=services)
+        | models.Q(source_type=ct_deploiement, source_id__in=deploiements)
+        | models.Q(destination_type=ct_deploiement, destination_id__in=deploiements)
+    ).select_related("deployment", "deployment__application", "deployment__environment", "service")
+
+    resultats = []
+    for flux in concernes.distinct():
+        if flux.source_type_id == ct_machine.pk and flux.source_id == machine.pk:
+            raison = "la machine est la source"
+        elif flux.destination_type_id == ct_machine.pk and flux.destination_id == machine.pk:
+            raison = "la machine est la destination"
+        elif flux.service_id in services:
+            raison = f"porte le service « {flux.service} »"
+        else:
+            raison = "flux déclaré au niveau du déploiement"
+        resultats.append((flux, raison))
+    return resultats
+
+
+def services_sans_source(machine):
+    """Les services exposés par cette machine qu'aucun flux ne couvre.
+
+    Le même manque que la catégorie « à déclarer » de la matrice, vu depuis la
+    machine : c'est de là qu'on part quand on tient un port dans la main et
+    qu'on cherche qui a le droit de s'y connecter.
+    """
+    from .models.flow import Flow
+
+    couverts = set(
+        Flow.objects.filter(service__isnull=False)
+        .filter(service__in=machine.services.all())
+        .values_list("service_id", flat=True)
+    )
+    return [service for service in machine.services.all() if service.pk not in couverts]
 
 
 def matrice_de_l_application(application):

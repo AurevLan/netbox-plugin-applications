@@ -577,3 +577,132 @@ class ParcoursGuideTest(SocleMixin, TestCase):
         Deployment.objects.create(application=self.app, environment=Environment.objects.get(slug="recette"))
         self.flux().save()
         self.assertTrue(self._etape_des_flux()["faite"])
+
+
+class VueDepuisLaMachineTest(SocleMixin, TestCase):
+    """On ne part pas toujours de l'application.
+
+    En incident, on part de la MACHINE : « celle-ci sert à quoi, et qui a le
+    droit de lui parler ? » Sans cet onglet, la réponse existait dans le
+    catalogue sans être atteignable depuis l'endroit où on se pose la question.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.poser_le_socle()
+        cls.user = get_user_model().objects.create_superuser("vm", "vm@exemple.invalid", "x")
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_the_tab_answers(self):
+        reponse = self.client.get(self.vm.get_absolute_url() + "catalogue/")
+        self.assertEqual(reponse.status_code, 200)
+
+    def test_it_names_the_application_the_machine_serves(self):
+        contenu = self.client.get(self.vm.get_absolute_url() + "catalogue/").content.decode()
+        self.assertIn("facturation", contenu)
+
+    def test_a_flow_whose_service_the_machine_carries_is_listed(self):
+        """Le cas le moins évident : la machine n'est pas l'extrémité du flux.
+
+        La destination est le DÉPLOIEMENT, et c'est le service porté par cette
+        machine qui désigne l'écoute. Sans ce cas, la page serait vide alors
+        qu'un flux ouvre bien un port de cette machine.
+        """
+        self.flux(destination_type=_ct(self.deploiement), destination_id=self.deploiement.pk).save()
+        concernes = matrice.flux_de_la_machine(self.vm)
+        self.assertEqual(len(concernes), 1)
+        self.assertIn("porte le service", concernes[0][1])
+
+    def test_a_flow_declared_on_the_deployment_is_listed(self):
+        """Un flux inter-applicatif ne nomme pas les machines, il nomme l'application."""
+        autre = Application.objects.create(name="consommatrice")
+        source = Deployment.objects.create(
+            application=autre, environment=Environment.objects.get(slug="recette")
+        )
+        # SANS service : c'est alors le rattachement au déploiement, et lui
+        # seul, qui relie le flux à cette machine.
+        self.flux(
+            source_type=_ct(source),
+            source_id=source.pk,
+            destination_type=_ct(self.deploiement),
+            destination_id=self.deploiement.pk,
+            service=None,
+            port_mappings=["tcp/5432"],
+        ).save()
+        concernes = matrice.flux_de_la_machine(self.vm)
+        raisons = [raison for _flux, raison in concernes]
+        self.assertIn("flux déclaré au niveau du déploiement", raisons)
+
+    def test_a_flow_where_the_machine_is_the_destination_is_listed(self):
+        self.flux(service=None, port_mappings=["tcp/22"]).save()
+        concernes = matrice.flux_de_la_machine(self.vm)
+        self.assertIn("la machine est la destination", [raison for _f, raison in concernes])
+
+    def test_a_flow_where_the_machine_is_the_source_is_listed(self):
+        autre = VirtualMachine.objects.create(name="cible-01", cluster=self.grappe)
+        self.flux(
+            source_type=_ct(self.vm),
+            source_id=self.vm.pk,
+            destination_type=_ct(autre),
+            destination_id=autre.pk,
+            service=None,
+            port_mappings=["tcp/5432"],
+        ).save()
+        self.assertIn(
+            "la machine est la source", [raison for _f, raison in matrice.flux_de_la_machine(self.vm)]
+        )
+
+    def test_a_machine_concerned_by_nothing_lists_nothing(self):
+        libre = VirtualMachine.objects.create(name="libre-01", cluster=self.grappe)
+        self.assertEqual(matrice.flux_de_la_machine(libre), [])
+
+    def test_an_uncovered_service_is_reported_on_the_machine(self):
+        self.assertEqual(matrice.services_sans_source(self.vm), [self.service])
+
+    def test_declaring_a_flow_covers_the_service(self):
+        self.flux().save()
+        self.assertEqual(matrice.services_sans_source(self.vm), [])
+
+    def test_the_tab_warns_about_an_uncovered_port(self):
+        contenu = self.client.get(self.vm.get_absolute_url() + "catalogue/").content.decode()
+        self.assertIn("aucun flux ne dit depuis", contenu)
+
+
+class ResumeSurLesFichesTest(SocleMixin, TestCase):
+    """Le chiffre qui compte doit se voir en ouvrant la fiche.
+
+    Un onglet ne se visite que si l'on sait qu'il existe et qu'on a une raison
+    d'y aller. « Trois ports exposés sans source connue » doit se lire sans
+    cliquer, sinon personne ne le lira.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.poser_le_socle()
+        cls.user = get_user_model().objects.create_superuser("fiche", "fiche@exemple.invalid", "x")
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_the_application_page_shows_what_is_missing(self):
+        reponse = self.client.get(self.app.get_absolute_url())
+        self.assertEqual(reponse.context["resume_flux"]["a_declarer"], 1)
+        self.assertIn("à déclarer", reponse.content.decode())
+
+    def test_the_deployment_page_shows_what_is_missing(self):
+        reponse = self.client.get(self.deploiement.get_absolute_url())
+        self.assertEqual(reponse.context["resume_flux"]["a_declarer"], 1)
+
+    def test_a_declared_flow_clears_the_warning(self):
+        self.flux().save()
+        reponse = self.client.get(self.app.get_absolute_url())
+        self.assertEqual(reponse.context["resume_flux"]["a_declarer"], 0)
+        self.assertIn("couvert par un flux déclaré", reponse.content.decode())
+
+    def test_the_card_links_to_the_matrix_tab(self):
+        contenu = self.client.get(self.app.get_absolute_url()).content.decode()
+        self.assertIn('href="matrice/"', contenu)

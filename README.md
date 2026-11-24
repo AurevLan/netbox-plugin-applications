@@ -96,10 +96,16 @@ manque ceci », et c'est la seule forme qui serve à quelque chose lors d'une re
 
 | Emplacement | Ce qu'il répond |
 |---|---|
+| **Fiche** d'une application ou d'un déploiement | combien de ports sont exposés **sans source connue** |
 | Onglet sur un **déploiement** | que faut-il ouvrir pour cette instance ? |
 | Onglet sur une **application** | ce qui est ouvert en production l'est-il en recette ? |
+| Onglet **« Catalogue »** d'une machine virtuelle | elle sert à quoi, et **qui a le droit de lui parler** ? |
 | **Export CSV** sur chaque onglet | ce qu'on envoie à l'équipe réseau |
 | `GET /api/plugins/netbox_applications/flows/` | de quoi alimenter un pare-feu, adresses résolues |
+
+La première et la quatrième ligne comptent autant que les autres. **Une matrice rangée dans un
+onglet ne se visite que si l'on sait qu'il existe**, et on ne part pas toujours de l'application :
+en incident, on part de la machine.
 
 L'export est servi par **la même vue** que l'affichage, donc par le même calcul : deux chemins
 distincts finiraient par montrer deux matrices différentes, et c'est celle qu'on n'a pas sous les

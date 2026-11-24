@@ -38,9 +38,30 @@ matrice de flux, on a une liste de ports ouverts. Cette version apporte l'autre 
 - Filtres par application, par environnement, par déploiement, par service et par état.
   Indexation dans la recherche globale par **justification** et par **référence de règle**.
 
+### Ajouté — l'intégration, là où la question se pose
+
+Une matrice rangée dans un onglet ne se visite que si l'on sait qu'il existe et qu'on a une raison
+d'y aller. Trois ajouts pour qu'elle atteigne son lecteur :
+
+- **Résumé sur la fiche de l'application et sur celle du déploiement**, pas seulement dans
+  l'onglet : le chiffre qui compte — « trois ports exposés sans source connue » — se lit **en
+  ouvrant la page**, avec le détail de ce qui manque et un lien vers la matrice complète.
+- **Onglet « Catalogue » sur une machine virtuelle de NetBox.** On ne part pas toujours de
+  l'application : en incident, on part de la machine. Il répond à « elle sert à quoi ? » (ses
+  déploiements, avec un lien vers leur matrice), « qui a le droit de lui parler ? » (les flux qui
+  la concernent, **avec le motif de leur présence**) et « qu'expose-t-elle sans source
+  déclarée ? ».
+- Un flux concerne une machine de **trois façons**, et une seule est évidente : la machine est une
+  extrémité, elle **porte le service visé** — le cas le plus fréquent —, ou le flux est déclaré au
+  niveau de son **déploiement**, car un flux inter-applicatif ne nomme pas les machines. Ne traiter
+  que le premier cas aurait donné une page presque toujours vide, qui répond à côté sans le dire.
+- C'est aussi l'[ADR-0018](https://github.com/AurevLan/netbox-plugin-applications) tenu **des deux
+  côtés** : le rattachement machine ↔ déploiement se voyait depuis le déploiement, et nulle part
+  depuis la machine.
+
 ### Éprouvé
 
-**149 tests** (91 auparavant), exécutés sur **NetBox 4.5 et 4.7**. Les sept types d'extrémité sont
+**163 tests** (91 auparavant), exécutés sur **NetBox 4.5 et 4.7**. Les sept types d'extrémité sont
 résolus en adresses dans les tests, y compris le cas d'une VM **sans adresse primaire** — celui
 d'une machine provisionnée mais pas encore configurée, c'est-à-dire celle pour laquelle on demande
 un flux.
