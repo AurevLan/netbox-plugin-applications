@@ -59,6 +59,14 @@ d'y aller. Trois ajouts pour qu'elle atteigne son lecteur :
   côtés** : le rattachement machine ↔ déploiement se voyait depuis le déploiement, et nulle part
   depuis la machine.
 
+### Corrigé
+
+- **La version était déclarée deux fois sans contrôle.** `pyproject.toml` est resté en `0.13.0`
+  alors que le `PluginConfig` annonçait `0.14.0` : PyPI aurait installé une version que NetBox
+  aurait affichée autrement. Le contrôle de concordance du workflow de publication ne compare que
+  le **tag** au paquet — il n'aurait jamais vu cet écart. **L'intégration continue compare
+  désormais les deux déclarations**, à chaque poussée.
+
 ### Éprouvé
 
 **163 tests** (91 auparavant), exécutés sur **NetBox 4.5 et 4.7**. Les sept types d'extrémité sont

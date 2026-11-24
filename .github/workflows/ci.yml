@@ -41,6 +41,31 @@ jobs:
       - name: Formatage
         run: ruff format --check .
 
+      # LA VERSION EST DÉCLARÉE DEUX FOIS, et les deux servent à des publics
+      # différents : « pyproject.toml » est ce que PyPI installe, le
+      # « PluginConfig » est ce que NetBox AFFICHE. Les laisser diverger produit
+      # une instance qui annonce une version qu'elle n'exécute pas — constaté le
+      # 2026-11-24 sur le lab, où trois sources se contredisaient.
+      #
+      # Le contrôle de concordance du workflow de publication ne compare que le
+      # TAG au paquet : il n'aurait jamais vu cet écart-là.
+      - name: Les deux versions déclarées concordent-elles ?
+        run: |
+          set -euo pipefail
+          paquet="$(python -c "
+          import tomllib
+          print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])
+          ")"
+          code="$(python -c "
+          import netbox_applications
+          print(netbox_applications.config.version)
+          ")"
+          if [ "$paquet" != "$code" ]; then
+            echo "ECHEC : pyproject.toml declare $paquet, PluginConfig annonce $code." >&2
+            exit 1
+          fi
+          echo "Versions concordantes : $paquet"
+
   securite:
     name: Sécurité
     runs-on: ubuntu-latest
